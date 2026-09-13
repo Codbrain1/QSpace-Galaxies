@@ -11,6 +11,7 @@ namespace QSpace::Visualize {
 struct ColorPoint {
     double x;       // Позиция на шкале (0.0 - 1.0)
     double r, g, b; // Цвет (0.0 - 1.0)
+    bool   operator==(const ColorPoint&) const = default;
 };
 
 struct ColorMap {
@@ -19,6 +20,8 @@ struct ColorMap {
     QString             filePath;
     QVector<ColorPoint> points;
     bool                isPreset = false;
+
+    bool operator==(const ColorMap&) const = default;
 };
 
 class ColorMapPresets {

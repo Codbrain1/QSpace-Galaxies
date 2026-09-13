@@ -10,7 +10,8 @@ namespace QSpace::Visualize::Views {
 class AbstractView3D : public AbstractView {
     Q_OBJECT
   public:
-    explicit AbstractView3D(QObject* parent = nullptr) : AbstractView(parent) {};
+    explicit AbstractView3D(QObject* parent = nullptr)
+        : AbstractView(parent), m_settings(std::make_unique<View3D::View3DSettings>()) {};
     virtual ~AbstractView3D() = default;
 
     virtual void                    setCameraView(View3D::CameraViewType cameraView) = 0;
@@ -23,9 +24,11 @@ class AbstractView3D : public AbstractView {
                                    std::shared_ptr<Visualize::IRenderLayer> layer) = 0;
     virtual void detachRenderLayer(const QUuid& layerId)                           = 0;
 
+    QVariantMap getSettingsToVariantMap() const override;
+
+    bool setSettingsFromVariantMap(const QVariantMap& settings) override;
+
   protected:
-    // защищённый доступ, чтобы обычный код View3D мог итерироваться при рендере,
-    // но снаружи (кроме LayerManager) никто не модифицирует список напрямую
-    // QList<std::shared_ptr<Visualize::IRenderLayer>> m_renderLayers;
+    std::unique_ptr<View3D::View3DSettings> m_settings;
 };
 } // namespace QSpace::Visualize::Views

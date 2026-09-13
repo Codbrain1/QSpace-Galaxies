@@ -36,6 +36,35 @@ QUuid ViewManager::createView(Visualize::Views::ViewType type) {
     return id;
 }
 
+bool ViewManager::addView(std::shared_ptr<Visualize::Views::AbstractView> view) {
+    if (!view) {
+        return false;
+    }
+    auto id = view->id();
+
+    connect(view.get(), &Visualize::Views::AbstractView::updateRequested, this, [this, id]() {
+        emit viewUpdateRequested(id); // Адресное уведомление!
+    });
+
+    m_views.emplace(view->id(), std::move(view));
+
+    if (m_mainViewId.isNull()) {
+        m_mainViewId = id;
+    }
+
+    // 6. Уведомляем систему (AppCore -> MainWindow) о том, что окно создано
+    emit viewCreated(id, view->viewType());
+    return true;
+}
+
+QList<std::shared_ptr<Visualize::Views::AbstractView>> ViewManager::getAllViews() {
+    QList<std::shared_ptr<Visualize::Views::AbstractView>> views;
+    for (const auto& [id, view] : m_views) {
+        views.append(view);
+    }
+    return views;
+}
+
 std::shared_ptr<Visualize::Views::AbstractView> ViewManager::getView(const QUuid& viewId) {
     if (m_views.contains(viewId)) {
         return m_views[viewId];

@@ -9,6 +9,7 @@ add_subdirectory(LayerManager)
 add_subdirectory(AppCore)
 add_subdirectory(SessionManager)
 add_subdirectory(StyleManager)
+add_subdirectory(FileSchemeRegistry)
 
 add_library(Core INTERFACE)
 add_library(QSpace::Core ALIAS Core)
@@ -24,6 +25,7 @@ target_link_libraries(Core INTERFACE
             ViewManager
             StyleManager
             # VideoExportManager
+            FileSchemeRegistry
             SessionManager
             Qt6::Core
 )

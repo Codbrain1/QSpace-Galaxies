@@ -1,10 +1,4 @@
 #pragma once
-#include "Core/DataManager/DataManager.h"
-#include "Core/LayerManager/LayerManager.h"
-#include "Core/ObjectRegistry/ObjectRegistry.h"
-#include "Core/SessionManager/SessionManager.h"
-#include "Core/TaskManager/TaskManager.h"
-#include "Core/ViewManager/ViewManager.h"
 #include <QObject>
 #include <qcontainerfwd.h>
 #include <qobject.h>
@@ -27,6 +21,7 @@ class ObjectRegistry;
 class ViewManager;
 class LayerManager;
 class SessionManager;
+class FileSchemeRegistry;
 // class VideoExportManager;
 } // namespace QSpace::Core
 
@@ -47,7 +42,7 @@ class AppCore : public QObject {
     Q_OBJECT
   public:
     explicit AppCore(QObject* parent = nullptr);
-    ~AppCore() = default;
+    ~AppCore();
     // ---------------------------------------------------------
     // @SECTION: инициализация
     // ---------------------------------------------------------
@@ -80,12 +75,13 @@ class AppCore : public QObject {
     // менеджеры отвечающие за отдельные части системы
     std::unique_ptr<TaskManager> m_taskManager;
     // std::shared_ptr<VideoExportManager> m_videoExportManager;
-    std::unique_ptr<ObjectRegistry> m_objectRegistry;
-    std::unique_ptr<DataManager>    m_dataManager;
-    std::unique_ptr<ViewManager>    m_viewManager;
-    std::unique_ptr<LayerManager>   m_layerManager;
-    std::unique_ptr<SessionManager> m_sessionManager;
-    QSpace::Session::CurrentSession m_session_state;
+    std::unique_ptr<ObjectRegistry>     m_objectRegistry;
+    std::unique_ptr<DataManager>        m_dataManager;
+    std::unique_ptr<ViewManager>        m_viewManager;
+    std::unique_ptr<LayerManager>       m_layerManager;
+    std::unique_ptr<SessionManager>     m_sessionManager;
+    std::unique_ptr<FileSchemeRegistry> m_fileSchemeRegistry;
+    QSpace::Session::CurrentSession     m_session_state;
 
     // модели данных
     std::unique_ptr<Models::DataTreeModel> m_dataTreeModel;

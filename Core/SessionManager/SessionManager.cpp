@@ -27,8 +27,9 @@ std::optional<QSpace::Session::ProjectState> SessionManager::loadProject(const Q
 }
 
 bool SessionManager::savePalette(const Visualize::ColorMap& map, const QString& filePath) {
-    auto       jsonFile = QSpace::Session::ProjectSerializer::serializeColorMap(map);
-    QByteArray data     = QJsonDocument(jsonFile).toJson(QJsonDocument::Indented);
+    auto jsonFile = QSpace::Session::ProjectSerializer::serializeColorMap(
+        map); // TODO преренести реализацию метода в ColorMapSerializer
+    QByteArray data = QJsonDocument(jsonFile).toJson(QJsonDocument::Indented);
     return m_storage_session->save(filePath, data);
 }
 
@@ -59,7 +60,7 @@ bool SessionManager::saveProject(const QSpace::Session::CurrentSession& curSessi
         ds.stats  = node->stats;
         ds.type   = node->type;
         ds.format = node->format;
-        ds.scheme = node->scheme;
+        // ds.scheme = node->scheme;
         state.nodesStates.append(ds);
     }
     // 2. Сохраняем ВИЗУАЛЬНОЕ ПРЕДСТАВЛЕНИЕ (Слои)

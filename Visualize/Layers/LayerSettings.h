@@ -36,55 +36,145 @@ class LayerSettings : public QObject {
     Q_PROPERTY(bool          autoRange     READ autoRange     WRITE setAutoRange     NOTIFY changed)
     Q_PROPERTY(int           zOrder        READ zOrder        WRITE setZOrder        NOTIFY changed)
     Q_PROPERTY(BlendMode     blendMode     READ blendMode     WRITE setBlendMode     NOTIFY changed)
-    // Q_PROPERTY(bool          pickable      READ pickable      WRITE setPickable      NOTIFY changed)
-
-public:
-
-    explicit LayerSettings(QObject* parent = nullptr) : QObject(parent)
-    {
+    // clang-format on
+  public:
+    explicit LayerSettings(QObject* parent = nullptr) : QObject(parent) {
         m_colorMapId = Visualize::ColorMapPresets::getPresetByName("Plasma").id;
     }
+
     virtual ~LayerSettings() = default;
 
-    bool isVisible() const { return m_isVisible; }
-    void setVisible(bool v) { if (v != m_isVisible) { m_isVisible = v; emit changed(); } }
+    bool isVisible() const {
+        return m_isVisible;
+    }
 
-    double opacity() const { return m_opacity; }
-    void setOpacity(double o) { if (!qFuzzyCompare(o, m_opacity)) { m_opacity = o; emit changed(); } }
+    void setVisible(bool v) {
+        if (v != m_isVisible) {
+            m_isVisible = v;
+            emit changed();
+        }
+    }
 
-    QString colorByField() const { return m_colorByField; }
-    void setColorByField(const QString& f) { if (f != m_colorByField) { m_colorByField = f; emit changed(); } }
-    QUuid colorMapId() const { return m_colorMapId; }
-    void setColorMapId(const QUuid& id) { if (id != m_colorMapId) { m_colorMapId = id; emit changed(); } }
+    double opacity() const {
+        return m_opacity;
+    }
 
-    bool useLogScale() const { return m_useLogScale; }
-    void setUseLogScale(bool u) { if (u != m_useLogScale) { m_useLogScale = u; emit changed(); } }
+    void setOpacity(double o) {
+        if (!qFuzzyCompare(o, m_opacity)) {
+            m_opacity = o;
+            emit changed();
+        }
+    }
 
-    double rangeMin() const { return m_rangeMin; }
-    void setRangeMin(double v) { if (!qFuzzyCompare(v, m_rangeMin)) { m_rangeMin = v; emit changed(); } }
+    QString colorByField() const {
+        return m_colorByField;
+    }
 
-    double rangeMax() const { return m_rangeMax; }
-    void setRangeMax(double v) { if (!qFuzzyCompare(v, m_rangeMax)) { m_rangeMax = v; emit changed(); } }
+    void setColorByField(const QString& f) {
+        if (f != m_colorByField) {
+            m_colorByField = f;
+            emit changed();
+        }
+    }
 
-    double baseRangeMin() const { return m_baseRangeMin; }
-    void setBaseRangeMin(double v) { if (!qFuzzyCompare(v, m_baseRangeMin)) { m_baseRangeMin = v; emit changed(); } }
+    QUuid colorMapId() const {
+        return m_colorMapId;
+    }
 
-    double baseRangeMax() const { return m_baseRangeMax; }
-    void setBaseRangeMax(double v) { if (!qFuzzyCompare(v, m_baseRangeMax)) { m_baseRangeMax = v; emit changed(); } }
+    void setColorMapId(const QUuid& id) {
+        if (id != m_colorMapId) {
+            m_colorMapId = id;
+            emit changed();
+        }
+    }
 
-    bool autoRange() const { return m_autoRange; }
-    void setAutoRange(bool a) { if (a != m_autoRange) { m_autoRange = a; emit changed(); } }
+    bool useLogScale() const {
+        return m_useLogScale;
+    }
 
-    int zOrder() const { return m_zOrder; }
-    void setZOrder(int z) { if (m_zOrder != z) { m_zOrder = z; emit changed(); } }
+    void setUseLogScale(bool u) {
+        if (u != m_useLogScale) {
+            m_useLogScale = u;
+            emit changed();
+        }
+    }
 
-    BlendMode blendMode() const { return m_blendMode; }
-    void setBlendMode(BlendMode m) { if (m_blendMode != m) { m_blendMode = m; emit changed(); } }
+    double rangeMin() const {
+        return m_rangeMin;
+    }
 
-    // bool pickable() const { return m_pickable; }
-    // void setPickable(bool p) { if (m_pickable != p) { m_pickable = p; emit changed(); } }
+    void setRangeMin(double v) {
+        if (!qFuzzyCompare(v, m_rangeMin)) {
+            m_rangeMin = v;
+            emit changed();
+        }
+    }
 
-    // clang-format on
+    double rangeMax() const {
+        return m_rangeMax;
+    }
+
+    void setRangeMax(double v) {
+        if (!qFuzzyCompare(v, m_rangeMax)) {
+            m_rangeMax = v;
+            emit changed();
+        }
+    }
+
+    double baseRangeMin() const {
+        return m_baseRangeMin;
+    }
+
+    void setBaseRangeMin(double v) {
+        if (!qFuzzyCompare(v, m_baseRangeMin)) {
+            m_baseRangeMin = v;
+            emit changed();
+        }
+    }
+
+    double baseRangeMax() const {
+        return m_baseRangeMax;
+    }
+
+    void setBaseRangeMax(double v) {
+        if (!qFuzzyCompare(v, m_baseRangeMax)) {
+            m_baseRangeMax = v;
+            emit changed();
+        }
+    }
+
+    bool autoRange() const {
+        return m_autoRange;
+    }
+
+    void setAutoRange(bool a) {
+        if (a != m_autoRange) {
+            m_autoRange = a;
+            emit changed();
+        }
+    }
+
+    int zOrder() const {
+        return m_zOrder;
+    }
+
+    void setZOrder(int z) {
+        if (m_zOrder != z) {
+            m_zOrder = z;
+            emit changed();
+        }
+    }
+
+    BlendMode blendMode() const {
+        return m_blendMode;
+    }
+
+    void setBlendMode(BlendMode m) {
+        if (m_blendMode != m) {
+            m_blendMode = m;
+            emit changed();
+        }
+    }
 
     QVariantMap toVariantMap() const {
         QVariantMap        map;
@@ -184,7 +274,6 @@ public:
     bool      m_autoRange    = true;  // автоматически ли подбирать диапазон окрашивания частиц
     int       m_zOrder       = 0;
     BlendMode m_blendMode    = BlendMode::Alpha;
-    // bool      m_pickable      = true;
 };
 
 } // namespace QSpace::Visualize::Layers

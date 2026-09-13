@@ -30,7 +30,6 @@ class OpenGL3DWidget : public AbstractView3D {
     void detachRenderLayer(const QUuid& layerId) override;
 
   private:
-    std::unique_ptr<View3DSettings> m_settings;
-    QPointer<GLViewport>            m_viewport;
+    QPointer<GLViewport> m_viewport;
 };
 } // namespace QSpace::Visualize::Views::View3D

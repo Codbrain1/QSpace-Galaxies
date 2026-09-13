@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.16) #минимальная версия cmake
 
 # 1. основные сведедения о проекте
 #-------------------------------------------------------------------
-project(QSpace VERSION 0.7.1 LANGUAGES CXX) # название проекта его версия и язык на котором написан проект
+project(QSpace VERSION 1.0 LANGUAGES CXX) # название проекта его версия и язык на котором написан проект
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     add_compile_options(-fdiagnostics-color=always)
 elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
@@ -26,6 +26,8 @@ if(WIN32)
     set(CMAKE_C_COMPILER "C:/Qt/Tools/mingw1310_64/bin/gcc.exe")
 endif()
 
+
+find_package(OpenMP REQUIRED)
 # 3. поиск зависимостей
 # Core - базовые классы
 # Gui - графика

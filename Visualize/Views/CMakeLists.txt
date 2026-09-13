@@ -1,4 +1,5 @@
-add_library(Views STATIC)
+add_library(Views SHARED)
+add_library(QSpace::VisualizeViews ALIAS Views)
 
 set(View2D_SOURSES 
 
@@ -27,6 +28,7 @@ target_include_directories(Views PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../../)
 target_link_libraries(Views PUBLIC
         project_config
         QSpace::Common
+        QSpace::VisualizeColorMapManager
         Qt6::Core
         Qt6::Widgets
         Qt6::Gui

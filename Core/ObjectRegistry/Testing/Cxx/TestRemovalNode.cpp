@@ -10,7 +10,7 @@
 #include <vtkSmartPointer.h>
 
 // Твои заголовки
-#include "Common/Structures/CoreStructures.h" // Путь к файлу с DataNode
+#include "Common/Structures/ObjectRegistryStructures.h" // Путь к файлу с DataNode
 #include "Core/ObjectRegistry/ObjectRegistry.h"
 
 using namespace QSpace::Core;
@@ -19,10 +19,12 @@ class TestRemovalNode : public QObject {
     Q_OBJECT
 
   private slots:
+
     // Вызывается перед каждым тестом: создаем чистый реестр
     void init() {
         m_registry = std::make_unique<ObjectRegistry>();
     }
+
     // Тест 3: Удаление
     void testRemovalNode_Success() {
         auto  polyData = vtkSmartPointer<vtkPolyData>::New();

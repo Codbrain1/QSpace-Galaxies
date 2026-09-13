@@ -1,7 +1,4 @@
 #include "Common/Enums/IOEnums.h"
-#include "IO/BIN/BINReader.h"
-#include "Structures/IOStructures.h"
-#include <functional>
 #include <qcontainerfwd.h>
 #include <qdebug.h>
 #include <qloggingcategory.h>
@@ -13,8 +10,13 @@
 #include <vtkPointData.h>
 #include <vtkPolyData.h>
 #include <vtkType.h>
+#include "IO/BIN/BINReader.h"
+#include "Structures/IOStructures.h"
+#include <functional>
+
 
 using namespace QSpace::IO;
+
 class TestBINReaderRead : public QObject {
     Q_OBJECT
   private slots:
@@ -33,7 +35,8 @@ class TestBINReaderRead : public QObject {
             << 100 << 1 << VTK_DOUBLE << VTK_DOUBLE << FilePolicy::ForceStandart;
         QTest::newRow("Double-Double-Interleaved-MMap")
             << 100 << 0 << VTK_DOUBLE << VTK_DOUBLE << FilePolicy::ForceMapped;
-        QTest::newRow("Double-Double-Columnar-Mmap") << 100 << 1 << VTK_DOUBLE << VTK_DOUBLE << FilePolicy::ForceMapped;
+        QTest::newRow("Double-Double-Columnar-Mmap")
+            << 100 << 1 << VTK_DOUBLE << VTK_DOUBLE << FilePolicy::ForceMapped;
 
         QTest::newRow("Float-Double-Interleaved-Stream")
             << 100 << 0 << VTK_FLOAT << VTK_DOUBLE << FilePolicy::ForceStandart;
@@ -41,13 +44,17 @@ class TestBINReaderRead : public QObject {
             << 100 << 1 << VTK_FLOAT << VTK_DOUBLE << FilePolicy::ForceStandart;
         QTest::newRow("Float-Double-Interleaved-MMap")
             << 100 << 0 << VTK_FLOAT << VTK_DOUBLE << FilePolicy::ForceMapped;
-        QTest::newRow("Float-Double-Columnar-Mmap") << 100 << 1 << VTK_FLOAT << VTK_DOUBLE << FilePolicy::ForceMapped;
+        QTest::newRow("Float-Double-Columnar-Mmap")
+            << 100 << 1 << VTK_FLOAT << VTK_DOUBLE << FilePolicy::ForceMapped;
 
         QTest::newRow("Int-Double-Interleaved-Stream")
             << 100 << 0 << VTK_INT << VTK_DOUBLE << FilePolicy::ForceStandart;
-        QTest::newRow("Int-Double-Columnar-Stream") << 100 << 1 << VTK_INT << VTK_DOUBLE << FilePolicy::ForceStandart;
-        QTest::newRow("Int-Double-Interleaved-MMap") << 100 << 0 << VTK_INT << VTK_DOUBLE << FilePolicy::ForceMapped;
-        QTest::newRow("Int-Double-Columnar-Mmap") << 100 << 1 << VTK_INT << VTK_DOUBLE << FilePolicy::ForceMapped;
+        QTest::newRow("Int-Double-Columnar-Stream")
+            << 100 << 1 << VTK_INT << VTK_DOUBLE << FilePolicy::ForceStandart;
+        QTest::newRow("Int-Double-Interleaved-MMap")
+            << 100 << 0 << VTK_INT << VTK_DOUBLE << FilePolicy::ForceMapped;
+        QTest::newRow("Int-Double-Columnar-Mmap")
+            << 100 << 1 << VTK_INT << VTK_DOUBLE << FilePolicy::ForceMapped;
 
         QTest::newRow("Double-Float-Interleaved-Stream")
             << 100 << 0 << VTK_DOUBLE << VTK_FLOAT << FilePolicy::ForceStandart;
@@ -55,19 +62,28 @@ class TestBINReaderRead : public QObject {
             << 100 << 1 << VTK_DOUBLE << VTK_FLOAT << FilePolicy::ForceStandart;
         QTest::newRow("Double-Float-Interleaved-MMap")
             << 100 << 0 << VTK_DOUBLE << VTK_FLOAT << FilePolicy::ForceMapped;
-        QTest::newRow("Double-Float-Columnar-Mmap") << 100 << 1 << VTK_DOUBLE << VTK_FLOAT << FilePolicy::ForceMapped;
+        QTest::newRow("Double-Float-Columnar-Mmap")
+            << 100 << 1 << VTK_DOUBLE << VTK_FLOAT << FilePolicy::ForceMapped;
 
         QTest::newRow("Float-Float-Interleaved-Stream")
             << 100 << 0 << VTK_FLOAT << VTK_FLOAT << FilePolicy::ForceStandart;
-        QTest::newRow("Float-Float-Columnar-Stream") << 100 << 1 << VTK_FLOAT << VTK_FLOAT << FilePolicy::ForceStandart;
-        QTest::newRow("Float-Float-Interleaved-MMap") << 100 << 0 << VTK_FLOAT << VTK_FLOAT << FilePolicy::ForceMapped;
-        QTest::newRow("Float-Float-Columnar-Mmap") << 100 << 1 << VTK_FLOAT << VTK_FLOAT << FilePolicy::ForceMapped;
+        QTest::newRow("Float-Float-Columnar-Stream")
+            << 100 << 1 << VTK_FLOAT << VTK_FLOAT << FilePolicy::ForceStandart;
+        QTest::newRow("Float-Float-Interleaved-MMap")
+            << 100 << 0 << VTK_FLOAT << VTK_FLOAT << FilePolicy::ForceMapped;
+        QTest::newRow("Float-Float-Columnar-Mmap")
+            << 100 << 1 << VTK_FLOAT << VTK_FLOAT << FilePolicy::ForceMapped;
 
-        QTest::newRow("Int-Float-Interleaved-Stream") << 100 << 0 << VTK_INT << VTK_FLOAT << FilePolicy::ForceStandart;
-        QTest::newRow("Int-Float-Columnar-Stream") << 100 << 1 << VTK_INT << VTK_FLOAT << FilePolicy::ForceStandart;
-        QTest::newRow("Int-Float-Interleaved-MMap") << 100 << 0 << VTK_INT << VTK_FLOAT << FilePolicy::ForceMapped;
-        QTest::newRow("Int-Float-Columnar-Mmap") << 100 << 1 << VTK_INT << VTK_FLOAT << FilePolicy::ForceMapped;
+        QTest::newRow("Int-Float-Interleaved-Stream")
+            << 100 << 0 << VTK_INT << VTK_FLOAT << FilePolicy::ForceStandart;
+        QTest::newRow("Int-Float-Columnar-Stream")
+            << 100 << 1 << VTK_INT << VTK_FLOAT << FilePolicy::ForceStandart;
+        QTest::newRow("Int-Float-Interleaved-MMap")
+            << 100 << 0 << VTK_INT << VTK_FLOAT << FilePolicy::ForceMapped;
+        QTest::newRow("Int-Float-Columnar-Mmap")
+            << 100 << 1 << VTK_INT << VTK_FLOAT << FilePolicy::ForceMapped;
     }
+
     void TestRead() {
         QFETCH(int, N);
         QFETCH(int, mode);
@@ -106,6 +122,7 @@ class TestBINReaderRead : public QObject {
         // Пишем сырые байты, игнорируя метаданные QDataStream
         out.writeRawData(reinterpret_cast<const char*>(&valLE), sizeof(T));
     }
+
     template <typename TAttr, typename TCoord> void writeInterleavedFunc(QDataStream& out, int N) {
         for (int i = 0; i < N; ++i) {
             writeRaw<TCoord>(out, static_cast<TCoord>(i));
@@ -117,7 +134,9 @@ class TestBINReaderRead : public QObject {
             writeRaw<TAttr>(out, value);
         }
     }
-    template <typename TAttr, typename TCoord> void writeNonInterleavedFunc(QDataStream& out, int N) {
+
+    template <typename TAttr, typename TCoord>
+    void writeNonInterleavedFunc(QDataStream& out, int N) {
         for (int i = 0; i < N; ++i) {
             writeRaw<TCoord>(out, static_cast<TCoord>(i));
         }
@@ -134,6 +153,7 @@ class TestBINReaderRead : public QObject {
             writeRaw<TAttr>(out, static_cast<TAttr>(i + 0.5));
         }
     }
+
     // N - number of line into file
     // mode: 0 - Interleaved, 1 - NonInterleaved
     // writeHeader: particle size and timestamp
@@ -208,6 +228,7 @@ class TestBINReaderRead : public QObject {
         file.close();
         return file_path;
     };
+
     ReadScheme createScheme(bool isInterleaved, int attrType, int coordType) {
         ColumnScheme scheme;
         scheme.headerOffsetBytes = 0; // всегда читаем начиная с заголовка
@@ -218,14 +239,14 @@ class TestBINReaderRead : public QObject {
         colCoord.name               = "Coords";
         colCoord.vtkDataType        = coordType;
         colCoord.numberOfComponents = 3;
-        colCoord.isCoordiante       = true;
+        colCoord.isCoordinate       = true;
         scheme.columnsPolicy.append(colCoord);
 
         ColumnScheme::Mapping colAttr;
         colAttr.name               = "TestAttribute";
         colAttr.vtkDataType        = attrType;
         colAttr.numberOfComponents = 1;
-        colAttr.isCoordiante       = false;
+        colAttr.isCoordinate       = false;
         colAttr.vtkAttributeRole   = -1; // Или vtkDataSetAttributes::SCALARS
         scheme.columnsPolicy.append(colAttr);
         return scheme;

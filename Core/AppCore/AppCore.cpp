@@ -5,12 +5,12 @@
 #include <memory>
 
 #include "Core/DataManager/DataManager.h"
+#include "Core/FileSchemeRegistry/FileSchemeRegistry.h"
 #include "Core/LayerManager/LayerManager.h"
 #include "Core/ObjectRegistry/ObjectRegistry.h"
 #include "Core/SessionManager/SessionManager.h"
 #include "Core/TaskManager/TaskManager.h"
 #include "Core/ViewManager/ViewManager.h"
-
 #include <QFileInfo>
 #include <QRegularExpression>
 #include <qfileinfo.h>
@@ -33,6 +33,7 @@ AppCore::AppCore(QObject* parent) : QObject(parent) {
     m_layerManager   = std::make_unique<LayerManager>();
     m_sessionManager =
         std::make_unique<SessionManager>(m_objectRegistry.get(), m_layerManager.get());
+    m_fileSchemeRegistry = std::make_unique<FileSchemeRegistry>();
 
     // 2. Инициализация контроллеров (Внедрение зависимостей)
     m_viewController = std::make_unique<Controllers::ViewController>(m_viewManager.get(),
@@ -57,6 +58,8 @@ AppCore::AppCore(QObject* parent) : QObject(parent) {
                                                                       m_layerManager.get());
 }
 
+AppCore::~AppCore() = default;
+
 void AppCore::initialize() {
     m_viewController->initialize();
     m_dataController->initialize();
@@ -67,6 +70,9 @@ void AppCore::initialize() {
             m_dataController.get(),
             &Controllers::DataController::onRequestDataLoad,
             Qt::QueuedConnection);
+
+    // регистрируем стандартные схемы для менеджера схем файлов
+    m_fileSchemeRegistry->registerStandartPresets();
 }
 
 Controllers::ViewController* AppCore::viewController() const {

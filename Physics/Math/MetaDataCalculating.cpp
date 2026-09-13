@@ -1,9 +1,11 @@
 #include "MetaDataCalculating.h"
+#include <vtkDataArray.h>
+#include <vtkPointData.h>
 
 namespace QSpace::Physics::Math {
-QSpace::Core::DataNode::MetaData calculateMetaData(vtkSmartPointer<vtkDataSet> dataSet,
-                                                   double                      timestamp) {
-    QSpace::Core::DataNode::MetaData stats;
+QSpace::Core::DataNodeMetaData calculateMetaData(vtkSmartPointer<vtkDataSet> dataSet,
+                                                 double                      timestamp) {
+    QSpace::Core::DataNodeMetaData stats;
 
     if (dataSet) {
         dataSet->GetBounds(stats.bounds);

@@ -1,14 +1,13 @@
 
 #include "OpenGL3DWidget.h"
 #include "Common/Enums/ViewEnums.h"
+#include <qcontainerfwd.h>
 #include "Logger/Logger.h"
 
 namespace QSpace::Visualize::Views::View3D {
 
 OpenGL3DWidget::OpenGL3DWidget(QObject* parent)
-    : AbstractView3D(parent),
-      m_settings(std::make_unique<View3DSettings>()),
-      m_viewport(new GLViewport(m_settings.get())) {
+    : AbstractView3D(parent), m_viewport(new GLViewport(m_settings.get())) {
 }
 
 QWidget* OpenGL3DWidget::getWidget() {
@@ -36,7 +35,6 @@ void OpenGL3DWidget::resetCamera() {
 }
 
 ViewType OpenGL3DWidget::viewType() {
-    // ПРЕДПОЛОЖЕНИЕ: значение enum ViewType::View3D существует в ViewEnums.h
     return ViewType::OpenGL3D;
 }
 

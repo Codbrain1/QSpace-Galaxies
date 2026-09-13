@@ -2,7 +2,9 @@ add_library(Structures INTERFACE)
 target_sources(Structures INTERFACE
     ColormapPresets.h
     FileSchemeStructures.h
+    FileSchemeRegistry.h
     ObjectRegistryStructures.h
+    DataNodeMetaData.h
     RenderContext.h
     SessionStructures.h
 )

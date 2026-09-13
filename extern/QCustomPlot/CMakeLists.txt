@@ -9,6 +9,8 @@ message(STATUS " Detected Qt Version: ${Qt6_VERSION}")
 message(STATUS " Qt Installation Dir: ${Qt6_DIR}")
 message(STATUS "=======================================================")
 
+set(CMAKE_AUTOMOC ON)
+
 add_library(qcustomplot STATIC 
     qcustomplot.cpp 
     qcustomplot.h
@@ -17,6 +19,8 @@ add_library(qcustomplot STATIC
 set_target_properties(qcustomplot PROPERTIES 
     AUTOMOC ON
 )
+
+target_compile_options(qcustomplot PRIVATE "-fno-lto")
 
 target_include_directories(qcustomplot SYSTEM PUBLIC 
     ${CMAKE_CURRENT_SOURCE_DIR}

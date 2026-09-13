@@ -17,7 +17,9 @@ Implementations/SPH/SPHRendererLayer.cpp
 Implementations/SPH/SPHPointsLayerSettings.h
 )
 
-add_library(Layers STATIC)
+add_library(Layers SHARED)
+add_library(QSpace::VisualizeLayers ALIAS Layers) 
+
 target_sources(Layers PRIVATE
            Layer.h
            LayerSettings.h

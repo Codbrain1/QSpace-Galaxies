@@ -1,5 +1,6 @@
 #pragma once
 #include "Common/Structures/ObjectRegistryStructures.h"
+#include "Common/Structures/SessionStructures.h"
 #include <QObject>
 #include <qobject.h>
 #include <qtmetamacros.h>
@@ -66,6 +67,7 @@ class ObjectRegistry : public QObject {
     std::shared_ptr<Snapshot>   findSnapshotByName(const QString& name) const;
     std::shared_ptr<Experiment> findExperimentByName(const QString& name) const;
 
+
     void updateNodeData(const QUuid& id, vtkSmartPointer<vtkDataSet> dataSet, double timestamp);
 
     Q_INVOKABLE QList<std::shared_ptr<DataNode>> getAllNodes() {
@@ -91,8 +93,7 @@ class ObjectRegistry : public QObject {
 
     // вызывается, когда данные ноды загрузились в ОЗУ или были выгружены кэшем
     void nodeDataUpdated(const QUuid& id);
-    void
-    dataLoadRequested(const QUuid& id, const QString& path, const QSpace::IO::ReadScheme& scheme);
+    void dataLoadRequested(const QUuid& id);
 
   private:
     size_t                                  m_cacheCapacity = 30;

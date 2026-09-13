@@ -1,6 +1,8 @@
 #pragma once
 #include "Common/Enums/IOEnums.h"
 #include "Common/Structures/FileSchemeStructures.h"
+#include <vtkDataSet.h>
+#include <vtkMultiBlockDataSet.h>
 
 namespace QSpace::IO {
 struct ReadResult { // результат чтения одного файла

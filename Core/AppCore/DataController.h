@@ -42,28 +42,26 @@ class DataController : public QObject {
 
     //  --- Импорт и загрузка данных ---
 
-    void importFiles(const QStringList&            paths,
-                     Core::ModelingProgrammVersion version = Core::ModelingProgrammVersion::V2,
-                     const QUuid&                  targetExperimentId = QUuid());
-
-    void importExperiment(
-        const QString&                experimentPath,
-        Core::ModelingProgrammVersion version = Core::ModelingProgrammVersion::V2); // TODO
+    void importFiles(const QStringList&          paths,
+                     IO::ModelingProgrammVersion version = IO::ModelingProgrammVersion::V2,
+                     const QUuid&                targetExperimentId = QUuid());
 
     void
-    importExperiment(const QStringList&            filePaths,
-                     const QString&                experimentName,
-                     Core::ModelingProgrammVersion version = Core::ModelingProgrammVersion::V2);
+    importExperiment(const QString&              experimentPath,
+                     IO::ModelingProgrammVersion version = IO::ModelingProgrammVersion::V2); // TODO
+
+    void importExperiment(const QStringList&          filePaths,
+                          const QString&              experimentName,
+                          IO::ModelingProgrammVersion version = IO::ModelingProgrammVersion::V2);
 
     std::optional<QUuid> getExperimentIdByNodePath(const QString& nodePath) const;
     std::optional<QUuid> getNodeIdByFilePath(const QString& filePath) const;
 
     // --- Управление узлами данных (Nodes) ---
-    void                                    createLayerForNode(const QUuid& nodeId);
-    std::shared_ptr<QSpace::Core::DataNode> getNodeById(const QUuid& nodeId);
-    [[deprecated("use direct layer requasted")]]
-    QUuid                                     getNodePaletteId(const QUuid& nodeId);
+    void                                      createLayerForNode(const QUuid& nodeId);
+    std::shared_ptr<QSpace::Core::DataNode>   getNodeById(const QUuid& nodeId);
     std::shared_ptr<Visualize::Layers::Layer> getLayerById(const QUuid& layerId);
+
     // Метод, который вызовет ProjectController при открытии проекта
     void prepareNodesForRestoration(const QMap<QString, Session::DataNodeState>& restoringNodes);
 
@@ -78,15 +76,6 @@ class DataController : public QObject {
   public slots:
     void removeNodeObject(const QUuid& id);
     void removeLayer(const QUuid& id);
-    /**
-     * @brief updateNodeSettings() --- обновляет данные записи в ObjectRegister
-     * @param id --- уникальный идентификатор записи
-     * @param modifer --- ссылка на функцию изменяющуюю данные записи, обязательно имеет
-     * единственный парметор VisualSettings
-     */
-    [[deprecated("use direct layer requasted")]]
-    void updateNodeSettings(const QUuid&                                           id,
-                            std::function<void(Visualize::Layers::LayerSettings&)> modifier);
 
     // при выборе ноды в плоском режиме
     void onNodeSelectionActivated(const QUuid& nodeId);

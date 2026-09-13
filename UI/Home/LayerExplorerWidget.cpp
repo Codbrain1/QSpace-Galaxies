@@ -199,23 +199,6 @@ void LayerExplorerWidget::setupSlots() {
             &LayerExplorerWidget::handleRemoveElement);
 
     if (m_app && m_app->dataTreeModel()) {
-        // connect(m_app->dataTreeModel(),
-        //         &QAbstractItemModel::dataChanged,
-        //         this,
-        //         [this](const QModelIndex& topLeft, const QModelIndex& bottomRight, const QList<int>& roles)
-        //         {
-        //             // Проверяем, что изменилось именно состояние чекбокса
-        //             if (roles.contains(Qt::CheckStateRole)) {
-        //                 QUuid id      = topLeft.data(Models::DataTreeModel::CustomRoles::IdRole).toUuid();
-        //                 bool  checked = (topLeft.data(Qt::CheckStateRole).toInt() == Qt::Checked);
-
-        //                 // Вызываем ваш сигнал обновления настроек в ObjectRegistry
-        //                 emit updateNodeSettingsRequested(id, [checked](Visualize::Layers::LayerSettings&
-        //                 settings) {
-        //                     settings.isVisible = checked;
-        //                 });
-        //             }
-        //         });
         connect(this,
                 &LayerExplorerWidget::removalObjectRequested,
                 m_app->dataController(),

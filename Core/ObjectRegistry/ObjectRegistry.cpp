@@ -167,7 +167,8 @@ std::shared_ptr<DataNode> ObjectRegistry::getOrLoadNodeData(const QUuid& id) {
 
     // Если данных в ОЗУ нет — читаем с диска
     qCInfo(LogCore) << "LRU Cache: Lazy loading heavy VTK data for" << node->label;
-    emit dataLoadRequested(id, node->path, node->scheme);
+    // emit dataLoadRequested(id, node->path, node->scheme);
+    //  CRITICAL: разобраться с подгрузкой данных
     return node;
 }
 

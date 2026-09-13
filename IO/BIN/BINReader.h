@@ -14,7 +14,6 @@
 #include <cstddef>
 #include <functional>
 
-
 namespace QSpace::IO {
 class BINReader : public IReader {
   public:
@@ -65,16 +64,16 @@ class BINReader : public IReader {
 
     //---вспомогательные функции Mmap
     QList<ParserFunc> generateParsers(const ReadContext& context, double* rawPointsPtr) const;
-    bool              readColumnMmap(const uchar*                 columnPtr,
-                                     int                          N,
-                                     const ColumnScheme::Mapping& col,
-                                     double*                      rawPointsPtr,
-                                     vtkAbstractArray*            attributArrayPtr) const;
-    bool              readColumnStream(QFile&                       file,
-                                       int                          N,
-                                       const ColumnScheme::Mapping& col,
-                                       double*                      rawPointsPtr,
-                                       vtkAbstractArray*            attributArrayPtr) const;
+    bool              readColumnMmap(const uchar*         columnPtr,
+                                     int                  N,
+                                     const ColumnMapping& col,
+                                     double*              rawPointsPtr,
+                                     vtkAbstractArray*    attributArrayPtr) const;
+    bool              readColumnStream(QFile&               file,
+                                       int                  N,
+                                       const ColumnMapping& col,
+                                       double*              rawPointsPtr,
+                                       vtkAbstractArray*    attributArrayPtr) const;
 
     template <class T>
     static void processCoordChunk(const uchar* srcBuffer,

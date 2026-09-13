@@ -15,7 +15,10 @@ class ViewManager : public QObject {
     explicit ViewManager(QObject* parent = nullptr);
     // Создает окно с заданным ракурсом (удобно для Quad-View)
     QUuid createView(Visualize::Views::ViewType type = Visualize::Views::ViewType::OpenGL3D);
-    void  setMainView(const QUuid& viewId);
+    bool  addView(std::shared_ptr<Visualize::Views::AbstractView> view);
+
+    void                                                   setMainView(const QUuid& viewId);
+    QList<std::shared_ptr<Visualize::Views::AbstractView>> getAllViews();
 
     std::shared_ptr<Visualize::Views::AbstractView> getView(const QUuid& viewId);
     QUuid                                           getMainViewId() const;
@@ -34,6 +37,7 @@ class ViewManager : public QObject {
 
     void renderAllViews();
     void renderView(const QUuid& id);
+
 
   signals:
     void viewCreated(const QUuid& id, Visualize::Views::ViewType type);

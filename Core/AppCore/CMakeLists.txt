@@ -23,6 +23,7 @@ target_link_libraries(AppCore PUBLIC
                 DataManager
                 TaskManager
                 SessionManager
+                FileSchemeRegistry
                 QSpace::Physics
                 Qt6::Core
 )

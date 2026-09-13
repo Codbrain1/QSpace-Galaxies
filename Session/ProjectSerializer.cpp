@@ -241,44 +241,44 @@ ProjectSerializer::deserializeVisualSettings(const QJsonObject& json) {
 // =========================================================================
 
 QJsonObject ProjectSerializer::serializeReadScheme(const IO::ReadScheme& scheme) {
-    return std::visit(
-        [](auto&& arg) -> QJsonObject {
-            using T = std::decay_t<decltype(arg)>;
-            QJsonObject obj;
-            if constexpr (std::is_same_v<T, IO::ColumnScheme>) {
-                obj = serializeColumnScheme(arg);
-                obj.insert("schemeType", "ColumnScheme");
-            } else if constexpr (std::is_same_v<T, IO::HDF5ReadScheme>) {
-                obj.insert("schemeType", "HDF5ReadScheme");
-                obj.insert("path", arg.internalDatasetPath);
-                obj.insert("loadAll", arg.loadAll);
-                obj.insert("compression", arg.compressionLevel);
-            } else if constexpr (std::is_same_v<T, IO::DefaultScheme>) {
-                obj.insert("schemeType", "DefaultScheme");
-            } else {
-                obj.insert("schemeType", "None");
-            }
-            return obj;
-        },
-        scheme);
+    // return std::visit(
+    //     [](auto&& arg) -> QJsonObject {
+    //         using T = std::decay_t<decltype(arg)>;
+    //         QJsonObject obj;
+    //         if constexpr (std::is_same_v<T, IO::ColumnScheme>) {
+    //             obj = serializeColumnScheme(arg);
+    //             obj.insert("schemeType", "ColumnScheme");
+    //         } else if constexpr (std::is_same_v<T, IO::HDF5ReadScheme>) {
+    //             obj.insert("schemeType", "HDF5ReadScheme");
+    //             obj.insert("path", arg.internalDatasetPath);
+    //             obj.insert("loadAll", arg.loadAll);
+    //             obj.insert("compression", arg.compressionLevel);
+    //         } else if constexpr (std::is_same_v<T, IO::DefaultScheme>) {
+    //             obj.insert("schemeType", "DefaultScheme");
+    //         } else {
+    //             obj.insert("schemeType", "None");
+    //         }
+    //         return obj;
+    //     },
+    //     scheme);
 }
 
 IO::ReadScheme ProjectSerializer::deserializeReadScheme(const QJsonObject& json) {
-    QString type = json["schemeType"].toString();
-    if (type == "ColumnScheme") {
-        return deserializeColumnScheme(json);
-    }
-    if (type == "HDF5ReadScheme") {
-        IO::HDF5ReadScheme s;
-        s.internalDatasetPath = json["path"].toString();
-        s.loadAll             = json["loadAll"].toBool();
-        s.compressionLevel    = json["compression"].toInt();
-        return s;
-    }
-    if (type == "DefaultScheme") {
-        return IO::DefaultScheme{};
-    }
-    return std::monostate{};
+    // QString type = json["schemeType"].toString();
+    // if (type == "ColumnScheme") {
+    //     return deserializeColumnScheme(json);
+    // }
+    // if (type == "HDF5ReadScheme") {
+    //     IO::HDF5ReadScheme s;
+    //     s.internalDatasetPath = json["path"].toString();
+    //     s.loadAll             = json["loadAll"].toBool();
+    //     s.compressionLevel    = json["compression"].toInt();
+    //     return s;
+    // }
+    // if (type == "DefaultScheme") {
+    //     return IO::DefaultScheme{};
+    // }
+    // return std::monostate{};
 }
 
 QJsonObject ProjectSerializer::serializeColumnScheme(const IO::ColumnScheme& cs) {
@@ -294,7 +294,7 @@ QJsonObject ProjectSerializer::serializeColumnScheme(const IO::ColumnScheme& cs)
         mObj.insert("vtkType", m.vtkDataType);
         mObj.insert("role", m.vtkAttributeRole);
         mObj.insert("components", m.numberOfComponents);
-        mObj.insert("isCoord", m.isCoordiante);
+        mObj.insert("isCoord", m.isCoordinate);
         cols.append(mObj);
     }
     obj.insert("columns", cols);
@@ -302,23 +302,23 @@ QJsonObject ProjectSerializer::serializeColumnScheme(const IO::ColumnScheme& cs)
 }
 
 IO::ColumnScheme ProjectSerializer::deserializeColumnScheme(const QJsonObject& json) {
-    IO::ColumnScheme cs;
-    cs.headerOffsetBytes = json["offset"].toInt();
-    cs.isInterleaved     = json["interleaved"].toBool();
-    cs.delimiter         = json["delimiter"].toString();
+    // IO::ColumnScheme cs;
+    // cs.headerOffsetBytes = json["offset"].toInt();
+    // cs.isInterleaved     = json["interleaved"].toBool();
+    // cs.delimiter         = json["delimiter"].toString();
 
-    QJsonArray cols = json["columns"].toArray();
-    for (auto v : cols) {
-        QJsonObject               mObj = v.toObject();
-        IO::ColumnScheme::Mapping m;
-        m.name               = mObj["name"].toString();
-        m.vtkDataType        = mObj["vtkType"].toInt();
-        m.vtkAttributeRole   = mObj["role"].toInt();
-        m.numberOfComponents = mObj["components"].toInt();
-        m.isCoordiante       = mObj["isCoord"].toBool();
-        cs.columnsPolicy.append(m);
-    }
-    return cs;
+    // QJsonArray cols = json["columns"].toArray();
+    // for (auto v : cols) {
+    //     QJsonObject               mObj = v.toObject();
+    //     IO::ColumnScheme::Mapping m;
+    //     m.name               = mObj["name"].toString();
+    //     m.vtkDataType        = mObj["vtkType"].toInt();
+    //     m.vtkAttributeRole   = mObj["role"].toInt();
+    //     m.numberOfComponents = mObj["components"].toInt();
+    //     m.isCoordinate       = mObj["isCoord"].toBool();
+    //     cs.columnsPolicy.append(m);
+    // }
+    // return cs;
 }
 
 QJsonObject ProjectSerializer::serializeColorMap(const QSpace::Visualize::ColorMap& map) {

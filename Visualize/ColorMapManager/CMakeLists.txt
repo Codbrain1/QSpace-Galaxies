@@ -1,4 +1,6 @@
-add_library(ColorMapManager STATIC)
+add_library(ColorMapManager SHARED)
+add_library(QSpace::VisualizeColorMapManager ALIAS ColorMapManager)
+
 target_sources(ColorMapManager PRIVATE
     ColorMapManager.h
     ColorMapManager.cpp

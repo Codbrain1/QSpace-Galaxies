@@ -283,7 +283,7 @@ bool BINReader::prepareVTK(BINReader::ReadContext& context) const {
     // Список атрибутов: Создаем массивы на основе types из columnsPolicy
     // Также запоминаем роли для установки активных атрибутов (Scalars, Vectors и т.д.)
     for (const auto& col : context.config.columnsPolicy) {
-        if (col.isCoordiante)
+        if (col.isCoordinate)
             continue;
         vtkSmartPointer<vtkAbstractArray> array;
         switch (col.vtkDataType) {
@@ -326,7 +326,7 @@ QList<BINReader::ParserFunc> BINReader::generateParsers(const ReadContext& conte
     QList<ParserFunc> parsers;
     int               attrrArrayIndex = 0;
     for (const auto& col : context.config.columnsPolicy) {
-        if (col.isCoordiante) {
+        if (col.isCoordinate) {
             switch (col.vtkDataType) { // ПАРСЕР координат
                 case VTK_DOUBLE: {
                     parsers.append([rawPointsPtr](const uchar* ptr, int i) {
@@ -408,13 +408,13 @@ QList<BINReader::ParserFunc> BINReader::generateParsers(const ReadContext& conte
     return parsers;
 }
 
-bool BINReader::readColumnMmap(const uchar*                 columnPtr,
-                               int                          N,
-                               const ColumnScheme::Mapping& col,
-                               double*                      rawPointsPtr,
-                               vtkAbstractArray*            attributArrayPtr) const {
+bool BINReader::readColumnMmap(const uchar*         columnPtr,
+                               int                  N,
+                               const ColumnMapping& col,
+                               double*              rawPointsPtr,
+                               vtkAbstractArray*    attributArrayPtr) const {
     int nComp = col.numberOfComponents;
-    if (col.isCoordiante) { // Координаты
+    if (col.isCoordinate) { // Координаты
         switch (col.vtkDataType) {
             case VTK_DOUBLE: {
                 const double* src = reinterpret_cast<const double*>(columnPtr);
@@ -575,13 +575,13 @@ bool BINReader::readNonInterleavedMmap(const uchar* startPtr,
             }
         }
         vtkAbstractArray* arr = nullptr;
-        if (!col.isCoordiante) {
+        if (!col.isCoordinate) {
             arr = context.attributArrays[attrIndex++];
         }
         bool res = readColumnMmap(currnetPtr, context.N, col, rawPointsPtr, arr);
         if (!res)
             return false;
-        if (col.isCoordiante)
+        if (col.isCoordinate)
             column_size *= 3;
         currnetPtr += column_size;
     }
@@ -600,11 +600,11 @@ bool BINReader::readStream(QFile& file, ReadContext& context) const {
     return res;
 }
 
-bool BINReader::readColumnStream(QFile&                       file,
-                                 int                          N,
-                                 const ColumnScheme::Mapping& col,
-                                 double*                      rawPointsPtr,
-                                 vtkAbstractArray*            attributArrayPtr) const {
+bool BINReader::readColumnStream(QFile&               file,
+                                 int                  N,
+                                 const ColumnMapping& col,
+                                 double*              rawPointsPtr,
+                                 vtkAbstractArray*    attributArrayPtr) const {
     constexpr int CHUNK_SIZE = 65536; // 64Кб
     QByteArray    buffer(CHUNK_SIZE, 0);
     char*         bufferPtr = buffer.data();
@@ -639,7 +639,7 @@ bool BINReader::readColumnStream(QFile&                       file,
                 return false;
             }
             const uchar* uBufferPtr = reinterpret_cast<const uchar*>(bufferPtr);
-            if (col.isCoordiante) {
+            if (col.isCoordinate) {
                 switch (col.vtkDataType) {
                     case VTK_DOUBLE: {
                         processCoordChunk<double>(uBufferPtr,
@@ -745,7 +745,7 @@ bool BINReader::readNonInterleavedStream(QFile&       file,
     int attrrArrayIndex = 0;
     for (const auto& col : context.config.columnsPolicy) {
         vtkAbstractArray* arr = nullptr;
-        if (!col.isCoordiante) {
+        if (!col.isCoordinate) {
             arr = context.attributArrays[attrrArrayIndex++];
         }
         auto res = readColumnStream(file, context.N, col, rawPointsPtr, arr);

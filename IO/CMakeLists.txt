@@ -13,8 +13,8 @@ target_sources(IO PUBLIC
             ReaderFactory.cpp
             ReaderFactory.h
             ReadResult.h
-            SchemeFactory.h
-            SchemeFactory.cpp
+            SchemePresets.h
+            SchemePresets.cpp
             ${IO_BIN}
 )   
 

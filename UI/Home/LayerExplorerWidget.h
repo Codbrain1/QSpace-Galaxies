@@ -45,8 +45,6 @@ class LayerExplorerWidget : public QWidget {
     void nodeSelectionActivated(const QUuid& id);
     void removalObjectRequested(const QUuid& id);
     void removalLayerRequested(const QUuid& id);
-    void updateNodeSettingsRequested(const QUuid&                                           id,
-                                     std::function<void(Visualize::Layers::LayerSettings&)> modifer);
     void layerStructureChanged(const Models::DataTreeModel::TreeMode mode);
     void snapshotCompleteForTimeSlider(const QUuid& snapshotId);
     // сигнал вызывающийся при выборе нового эксперимента для отображения

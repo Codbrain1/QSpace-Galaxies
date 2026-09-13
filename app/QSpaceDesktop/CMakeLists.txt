@@ -32,8 +32,8 @@ target_link_libraries(QSpace PRIVATE
             # Physics
             # Remote
             # QSpace::Session
-            qcustomplot
             QSpace::UI
+            qcustomplot
             Qt6::Core
             Qt6::Widgets
             Qt6::Gui
@@ -45,6 +45,7 @@ target_link_libraries(QSpace PRIVATE
             VTK::RenderingVolumeOpenGL2
             VTK::RenderingOpenGL2
             VTK::InteractionStyle
+            OpenMP::OpenMP_CXX
 )
 # Генерация макросов инициализации фабрик
 vtk_module_autoinit(

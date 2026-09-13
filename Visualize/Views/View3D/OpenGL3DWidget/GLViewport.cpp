@@ -1,4 +1,5 @@
 #include "GLViewport.h"
+#include "Common/Logger/Logger.h"
 #include "Visualize/ColorMapManager/ColorMapManager.h"
 #include "Visualize/ColorMapManager/ColorMapTexture.h"
 #include <QMouseEvent>
@@ -7,6 +8,7 @@
 #include <QWheelEvent>
 #include <QtMath>
 #include <qelapsedtimer.h>
+#include <qloggingcategory.h>
 #include <qnamespace.h>
 #include "Enums/ViewEnums.h"
 #include "Physics/DimensionConverter/PhysicalUnits.h"
@@ -17,6 +19,11 @@ namespace QSpace::Visualize::Views::View3D {
 
 GLViewport::GLViewport(View3DSettings* settings, QWidget* parent)
     : QOpenGLWidget(parent), m_settings(settings) {
+    if (!m_settings) {
+        qCCritical(LogRenderer()) << "Settings in GLViewPort is not initialized!";
+        return;
+    }
+
     QSurfaceFormat fmt;
     fmt.setVersion(3, 3);
     fmt.setProfile(QSurfaceFormat::CoreProfile);

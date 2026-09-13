@@ -207,10 +207,6 @@ void MainWindow::setupSlots() {
             &UI::MainWindow::handleRenderUpdate,
             Qt::QueuedConnection);
     //----- ПОДКЛЮЧЕНИЕ СЛОТОТОВ LayerExplorerWidget -----
-    connect(m_layerExplorerWidget.get(),
-            &LayerExplorerWidget::updateNodeSettingsRequested,
-            m_app->dataController(),
-            &QSpace::Core::Controllers::DataController::updateNodeSettings);
 
     // ---- Подключение кнопок QToolBar ----
     // работа со сценой

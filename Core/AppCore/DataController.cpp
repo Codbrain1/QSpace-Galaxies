@@ -6,7 +6,6 @@
 #include "Core/LayerManager/LayerManager.h"
 #include "Core/ObjectRegistry/ObjectRegistry.h"
 #include "Core/ViewManager/ViewManager.h"
-#include "IO/SchemeFactory.h"
 
 
 // Системные и утилитарные заголовки
@@ -61,9 +60,9 @@ void DataController::initialize() {
             &DataController::onRequestDataLoad);
 }
 
-void DataController::importFiles(const QStringList&            paths,
-                                 Core::ModelingProgrammVersion version,
-                                 const QUuid&                  targetExperimentId) {
+void DataController::importFiles(const QStringList&          paths,
+                                 IO::ModelingProgrammVersion version,
+                                 const QUuid&                targetExperimentId) {
     if (paths.isEmpty())
         return;
     QUuid experimentId;
@@ -84,11 +83,11 @@ void DataController::importFiles(const QStringList&            paths,
         IO::FileFormat        format     = IO::Utils::getFormat(paths[0]);
         Visualize::EntityType entityType = IO::Utils::getEntityType(QFileInfo(paths[0]).fileName());
         IO::ReadScheme        scheme;
-        if (version == Core::ModelingProgrammVersion::V2_3) {
-            scheme = IO::SchemeFactory::createScheme_v2_3(entityType, format);
-        } else {
-            scheme = IO::SchemeFactory::createScheme_v2(entityType, format);
-        }
+        // if (version == IO::ModelingProgrammVersion::V2_3) {
+        //     scheme = IO::SchemeFactory::createScheme_v2_3(entityType, format);
+        // } else {
+        //     scheme = IO::SchemeFactory::createScheme_v2(entityType, format);
+        // }
         QUuid taskId                     = m_dataManager->importDataAsync(paths[0], scheme);
         m_activeTasks[taskId].totalFiles = 1;
         if (!experimentId.isNull()) {
@@ -101,11 +100,11 @@ void DataController::importFiles(const QStringList&            paths,
             IO::FileFormat        format     = IO::Utils::getFormat(QFileInfo(path).fileName());
             Visualize::EntityType entityType = IO::Utils::getEntityType(QFileInfo(path).fileName());
             IO::ReadScheme        scheme;
-            if (version == Core::ModelingProgrammVersion::V2_3) {
-                scheme = IO::SchemeFactory::createScheme_v2_3(entityType, format);
-            } else {
-                scheme = IO::SchemeFactory::createScheme_v2(entityType, format);
-            }
+            // if (version == Core::ModelingProgrammVersion::V2_3) {
+            //     scheme = IO::SchemeFactory::createScheme_v2_3(entityType, format);
+            // } else {
+            //     scheme = IO::SchemeFactory::createScheme_v2(entityType, format);
+            // }
 
             IO::BatchTask task;
             task.path   = path;
@@ -120,8 +119,8 @@ void DataController::importFiles(const QStringList&            paths,
     }
 }
 
-void DataController::importExperiment(const QString&                experimentPath,
-                                      Core::ModelingProgrammVersion version) {
+void DataController::importExperiment(const QString&              experimentPath,
+                                      IO::ModelingProgrammVersion version) {
     if (experimentPath.isEmpty() || !m_dataManager || !m_objectRegistry) {
         return;
     }
@@ -154,11 +153,11 @@ void DataController::importExperiment(const QString&                experimentPa
 
         // Формируем схему чтения на основе выбранной версии программы
         IO::ReadScheme scheme;
-        if (version == Core::ModelingProgrammVersion::V2_3)
-            scheme = IO::SchemeFactory::createScheme_v2_3(entityType, fileFormat);
-        else {
-            scheme = IO::SchemeFactory::createScheme_v2(entityType, fileFormat);
-        }
+        // if (version == IO::ModelingProgrammVersion::V2_3)
+        //     scheme = IO::SchemeFactory::createScheme_v2_3(entityType, fileFormat);
+        // else {
+        //     scheme = IO::SchemeFactory::createScheme_v2(entityType, fileFormat);
+        // }
 
         tasks.append({filePath, scheme});
     }
@@ -176,9 +175,9 @@ void DataController::importExperiment(const QString&                experimentPa
     }
 }
 
-void DataController::importExperiment(const QStringList&            filePaths,
-                                      const QString&                experimentName,
-                                      Core::ModelingProgrammVersion version) {
+void DataController::importExperiment(const QStringList&          filePaths,
+                                      const QString&              experimentName,
+                                      IO::ModelingProgrammVersion version) {
     if (filePaths.isEmpty() || experimentName.isEmpty() || !m_dataManager || !m_objectRegistry) {
         return;
     }
@@ -254,30 +253,6 @@ std::optional<QUuid> DataController::getNodeIdByFilePath(const QString& filePath
 
 std::shared_ptr<Core::DataNode> DataController::getNodeById(const QUuid& nodeId) {
     return m_objectRegistry->getNode(nodeId);
-}
-
-[[deprecated("use direct layer requasted")]]
-QUuid DataController::getNodePaletteId(const QUuid& nodeId) {
-    auto node = m_objectRegistry->getNode(nodeId);
-    // return node ? node->masterSettings->colorMapId() : QUuid();
-    return QUuid();
-}
-
-[[deprecated("use direct layer requasted")]]
-void DataController::updateNodeSettings(
-    const QUuid&                                           id,
-    std::function<void(Visualize::Layers::LayerSettings&)> modifier) {
-    auto node = m_objectRegistry->getNode(id);
-    if (!node)
-        return;
-
-    // 1. Модифицируем мастер-настройки внутри структуры данных ноды
-    // modifier(*(node->masterSettings));
-
-    // 2. Просим LayerManager раскатить изменения на все активные VTK-пайплайны
-    m_layerManager->updateNodeMasterSettings(id);
-
-    emit sceneUpdateRequested();
 }
 
 void DataController::prepareNodesForRestoration(
@@ -370,15 +345,15 @@ void DataController::handleFileReady(const QUuid& taskId, QSpace::IO::ReadResult
         // node->masterSettings = restoredState.settings.clone();
         node->path   = restoredState.path;
         node->format = restoredState.format;
-        node->scheme = restoredState.scheme;
-        node->type   = restoredState.type;
+        // node->scheme = restoredState.scheme;
+        node->type = restoredState.type;
     } else {
         // Обычный новый импорт с диска
-        node->path             = result.path;
-        node->format           = result.format;
-        node->label            = fileName;
-        node->type             = type;
-        node->scheme           = result.scheme;
+        node->path   = result.path;
+        node->format = result.format;
+        node->label  = fileName;
+        node->type   = type;
+        // node->scheme           = result.scheme;
         node->stats.pointCount = result.pointCount; // Записываем размер из прочитанного заголовка
 
         // Если файлы идут пачкой (часть эксперимента), скрываем их, чтобы не перегрузить сцену.
@@ -430,11 +405,11 @@ void DataController::onRequestDataLoad(const QUuid& nodeId) {
 
     m_loadingNodes.insert(nodeId);
 
-    QUuid taskId =
-        m_dataManager->importDataAsync(node->path, node->scheme, IO::ImportRole::FullData);
+    // QUuid taskId =
+    //     m_dataManager->importDataAsync(node->path, node->scheme, IO::ImportRole::FullData);
 
     // Сразу регистрируем задачу и привязываем к ней ноду
-    m_activeTasks[taskId] = TaskInfo{nodeId, 1};
+    // m_activeTasks[taskId] = TaskInfo{nodeId, 1};
 
     qCInfo(LogCore) << "Lazy loading started for:" << node->label;
 }
