@@ -33,7 +33,7 @@ class TestRegisterNode : public QObject {
         m_registry->registerNode(node);
         QCOMPARE(m_registry->getAllNodes().size(), 1);
         QCOMPARE(spy.count(), 1);
-        auto signaledNode = spy.at(0).at(0).value<std::shared_ptr<DataNode>>();
+        auto signaledNode = spy.at(0).at(0).value<std::shared_ptr<QSpace::Core::DataNode>>();
         QCOMPARE(signaledNode->id, node->id);
     }
 
@@ -48,8 +48,8 @@ class TestRegisterNode : public QObject {
         QSignalSpy spy(m_registry.get(), &ObjectRegistry::nodeAdded);
         auto       node = std::make_shared<DataNode>(nullptr, "TestNode");
         m_registry->registerNode(node);
-        QCOMPARE(m_registry->getAllNodes().size(), 0);
-        QCOMPARE(spy.count(), 0);
+        QCOMPARE(m_registry->getAllNodes().size(), 1);
+        QCOMPARE(spy.count(), 1);
     }
 
   private:

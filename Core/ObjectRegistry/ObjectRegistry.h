@@ -5,10 +5,11 @@
 #include <qobject.h>
 #include <qtmetamacros.h>
 #include <quuid.h>
+#include "objectregistry_export.h"
 #include <memory>
 
 namespace QSpace::Core {
-class ObjectRegistry : public QObject {
+class OBJECTREGISTRY_EXPORT ObjectRegistry : public QObject {
     Q_OBJECT
     Q_PROPERTY(int nodeCount READ nodeCount NOTIFY nodeAdded)
     Q_PROPERTY(int snapshotCount READ snapshotCount NOTIFY snapshotAdded)
@@ -85,8 +86,7 @@ class ObjectRegistry : public QObject {
     Q_INVOKABLE void clear();
   signals:
     void nodeAdded(std::shared_ptr<QSpace::Core::DataNode> node, const QUuid& parentSnapshotId);
-    void snapshotAdded(std::shared_ptr<QSpace::Core::Snapshot> container,
-                       const QUuid&                            parentExperimentId);
+    void snapshotAdded(std::shared_ptr<QSpace::Core::Snapshot> container, const QUuid& parentExperimentId);
     void experimentAdded(std::shared_ptr<QSpace::Core::Experiment> experiment);
     void objectRemoved(const QUuid& id);
     void cleared();

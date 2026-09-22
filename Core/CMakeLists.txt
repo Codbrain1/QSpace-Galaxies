@@ -17,12 +17,12 @@ target_include_directories(Core INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/..)
 target_link_libraries(Core INTERFACE
             project_config
             TaskManager
-            ObjectRegistry
+            QSpace::CoreObjectRegistry
             DataManager
             LogManager
             LayerManager
             AppCore
-            ViewManager
+            QSpace::CoreViewManager
             StyleManager
             # VideoExportManager
             FileSchemeRegistry

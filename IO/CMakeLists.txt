@@ -23,3 +23,5 @@ target_link_libraries(IO PUBLIC
         QSpace::Common
         Qt6::Core
 )
+
+add_subdirectory(BIN/Testing)

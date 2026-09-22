@@ -11,11 +11,11 @@ ViewManager::ViewManager(QObject* parent) : QObject(parent) {
 
 QUuid ViewManager::createView(Visualize::Views::ViewType type) {
     auto newView = QSpace::Visualize::Views::ViewFactory::createView(type);
-    auto id      = newView->id();
     // Проверка на случай неудачного создания или нереализованного типа (как Widget_2D сейчас)
     if (!newView) {
         return QUuid();
     }
+    auto id = newView->id();
 
     connect(newView.get(), &Visualize::Views::AbstractView::updateRequested, this, [this, id]() {
         emit viewUpdateRequested(id); // Адресное уведомление!

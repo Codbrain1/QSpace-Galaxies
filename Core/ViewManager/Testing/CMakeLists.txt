@@ -1,0 +1,1 @@
+qspace_add_test(TestViewManagerCreateWindow QSpace::CoreViewManager)

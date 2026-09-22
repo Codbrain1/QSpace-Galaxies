@@ -42,7 +42,7 @@ bool ViewManagerSerializer::fromDTO(const Session::ViewManagerDTO& dto, Core::Vi
         }
     }
 
-    if (viewManager->getView(dto.mainViewId)) { // если такой метод есть, либо getView(id) != nullptr
+    if (viewManager->getView(dto.mainViewId)) {
         viewManager->setMainView(dto.mainViewId);
     } else {
         allOk = false;

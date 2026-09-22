@@ -5,11 +5,12 @@
 #include <qtmetamacros.h>
 #include <quuid.h>
 #include <vtkRenderWindow.h>
+#include "viewmanager_export.h"
 #include <map>
 #include <memory>
 
 namespace QSpace::Core {
-class ViewManager : public QObject {
+class VIEWMANAGER_EXPORT ViewManager : public QObject {
     Q_OBJECT
   public:
     explicit ViewManager(QObject* parent = nullptr);

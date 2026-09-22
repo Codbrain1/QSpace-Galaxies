@@ -1,4 +1,5 @@
 #include "Common/Enums/IOEnums.h"
+#include "Common/Structures/FileSchemeStructures.h"
 #include <qcontainerfwd.h>
 #include <qdebug.h>
 #include <qloggingcategory.h>
@@ -11,8 +12,8 @@
 #include <vtkPolyData.h>
 #include <vtkType.h>
 #include "IO/BIN/BINReader.h"
-#include "Structures/IOStructures.h"
 #include <functional>
+
 
 
 using namespace QSpace::IO;
@@ -235,14 +236,14 @@ class TestBINReaderRead : public QObject {
         scheme.isInterleaved     = isInterleaved;
 
         // координаты
-        ColumnScheme::Mapping colCoord;
+        ColumnMapping colCoord;
         colCoord.name               = "Coords";
         colCoord.vtkDataType        = coordType;
         colCoord.numberOfComponents = 3;
         colCoord.isCoordinate       = true;
         scheme.columnsPolicy.append(colCoord);
 
-        ColumnScheme::Mapping colAttr;
+        ColumnMapping colAttr;
         colAttr.name               = "TestAttribute";
         colAttr.vtkDataType        = attrType;
         colAttr.numberOfComponents = 1;

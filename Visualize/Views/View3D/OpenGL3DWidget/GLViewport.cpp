@@ -151,7 +151,12 @@ void GLViewport::initializeGL() {
         layer->initializeGL(this);
 }
 
-void GLViewport::resizeGL(int, int) {
+void GLViewport::resizeGL(int w, int h) {
+    // Получаем коэффициент масштабирования (например, 1.25 или 2.0 для Retina/HighDPI)
+    qreal retinaScale = devicePixelRatio();
+
+    // Умножаем логические w и h на этот коэффициент
+    glViewport(0, 0, w * retinaScale, h * retinaScale);
 }
 
 void GLViewport::fitCameraToLayers() {

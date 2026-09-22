@@ -57,12 +57,14 @@ DeserializationResult variantMapToQObject(const QVariantMap& map, QObject* obj);
 // Публичное API для случая, когда статический тип T известен на месте вызова
 // ------------------------------------------------------------------
 
+// сериализует любой класс QObject
 template <typename T>
     requires std::derived_from<T, QObject>
 inline QVariantMap QObjectToVariantMap(const T* obj) {
-    return details::QObjectToVariantMap(obj);
+    return QSpace::Reflection::details::QObjectToVariantMap(obj);
 }
 
+// раскладывает из вариант мапы поля в QObject
 template <typename T>
     requires std::derived_from<T, QObject>
 inline DeserializationResult variantMapToQObject(const QVariantMap& map, const T* obj) {

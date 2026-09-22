@@ -75,7 +75,15 @@ void ReflectionTest::testComplexGadgetSerialization() {
     // map.value("numbers").toList() возвращает QVariantList
     QCOMPARE(map.value("numbers").toList(), expectedVariantNumbers);
 
-    // QCOMPARE(map.value("simpleGadgets").toList(), simpleList);
+    const QVariantList variantList = map.value("simpleGadgets").toList();
+    QCOMPARE(variantList.size(), simpleList.size());
+
+    for (int i = 0; i < simpleList.size(); ++i) {
+        QVariantMap gadgetMap = variantList.at(i).toMap();
+
+        QCOMPARE(gadgetMap.value("id").toInt(), simpleList.at(i).id());
+        QCOMPARE(gadgetMap.value("name").toString(), simpleList.at(i).name());
+    }
 }
 
 // // 3. Data-driven тест с наборами данных
