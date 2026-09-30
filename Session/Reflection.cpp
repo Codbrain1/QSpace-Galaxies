@@ -57,6 +57,15 @@ QVariant serializeValue(const QVariant& value, const QMetaProperty& prop) {
         }
     }
 
+    // проверяем что значение может быть приведено к QObject
+    if (mt.flags().testFlag(QMetaType::PointerToQObject)) {
+        QObject* childObj = value.value<QObject*>();
+        if (childObj) {
+            return details::QObjectToVariantMap(childObj);
+        }
+        return QVariantMap();
+    }
+
     // проверяем на вложенный гаджет
     if (mt.metaObject()) {
         return details::serializeGadget(value);
@@ -98,13 +107,15 @@ QVariantMap serializeGadget(const QVariant& gadgetValue) {
         if (!prop.isReadable())
             continue;
         QVariant fieldValue = prop.readOnGadget(raw);
-        res.insert(QString::fromLatin1(prop.name()), serializeValue(fieldValue));
+
+        res.insert(QString::fromLatin1(prop.name()), serializeValue(fieldValue, prop));
     }
     return res;
 }
 
+// Метод не обрабатывает вложенные указатели в QObject и Gadget, а также не выделяет память,
 QVariant deserializeValue(int targetTypeId, const QVariant& flatValue, const QMetaProperty& prop) {
-    QMetaType targetType(targetTypeId); // <-- берём тип ЦЕЛИ, а не flatValue
+    QMetaType targetType(targetTypeId);
 
     if (!flatValue.isValid() || flatValue.isNull())
         return QVariant(targetType);
@@ -112,11 +123,16 @@ QVariant deserializeValue(int targetTypeId, const QVariant& flatValue, const QMe
     const bool isEnumViaProp = prop.isValid() && prop.isEnumType();
     const bool isEnumViaType = targetType.flags().testFlag(QMetaType::IsEnumeration);
 
+    if (targetType.flags().testFlag(QMetaType::PointerToQObject)) {
+        return QVariant();
+    }
+
     if (isEnumViaProp || isEnumViaType) {
         QMetaEnum metaEnum =
             isEnumViaProp ? prop.enumerator() : details::enumeratorForMetaType(targetType);
         int intValue = 0;
-        if (metaEnum.isValid() && flatValue.userType() == QMetaType::QString) {
+        if (metaEnum.isValid() &&
+            flatValue.typeId() == QMetaType::QString) { // ИСПРАВЛЕНО: typeId() для Qt6
             bool ok  = false;
             intValue = metaEnum.keyToValue(flatValue.toString().toLatin1().constData(), &ok);
             if (!ok)
@@ -131,13 +147,13 @@ QVariant deserializeValue(int targetTypeId, const QVariant& flatValue, const QMe
     }
 
     // вложенный гаджет
-    if (targetType.metaObject() && flatValue.userType() == QMetaType::QVariantMap) {
+    if (targetType.metaObject() &&
+        flatValue.typeId() == QMetaType::QVariantMap) { // ИСПРАВЛЕНО: typeId()
         return details::deserializeGadget(targetTypeId, flatValue.toMap());
     }
 
-
     QVariant result = flatValue;
-    if (result.userType() != targetTypeId)
+    if (result.typeId() != targetTypeId) // ИСПРАВЛЕНО: typeId()
         result.convert(targetType);
     return result;
 }
@@ -174,7 +190,7 @@ QVariantMap QObjectToVariantMap(const QObject* obj) {
     for (int i = 0; i < mo->propertyCount(); ++i) {
         QMetaProperty prop = mo->property(i);
         if (prop.isReadable()) {
-            map.insert(QString::fromLatin1(prop.name()), prop.read(obj));
+            map.insert(QString::fromLatin1(prop.name()), serializeValue(prop.read(obj), prop));
         }
     }
     return map;
@@ -217,16 +233,18 @@ DeserializationResult variantMapToQObject(const QVariantMap& map, QObject* obj) 
 QVariantMap readSchemeToVariant(const QSpace::IO::ReadScheme& scheme) {
     QVariantMap out;
     std::visit(
-        [&](auto&& s) {
+        [&out](auto&& s) {
             using T = std::decay_t<decltype(s)>;
             if constexpr (std::is_same_v<T, IO::DefaultScheme>) {
                 out["type"] = QStringLiteral("DefaultScheme");
             } else if constexpr (std::is_same_v<T, std::monostate>) {
                 out["type"] = QStringLiteral("None");
             } else {
-                // Сработает для ColumnScheme, DefaultScheme и т.д.
-                out["type"] = QString::fromLatin1(T::staticMetaObject.className());
-                out["data"] = gadgetToVariantMap(s);
+                // T::staticMetaObject.className() может вернуть "QSpace::IO::ColumnScheme"
+                // Берем только последнее имя для корректного матчинга
+                QString fullClassName = QString::fromLatin1(T::staticMetaObject.className());
+                out["type"]           = fullClassName.split(QStringLiteral("::")).last();
+                out["data"]           = gadgetToVariantMap(s);
             }
         },
         scheme);
@@ -234,21 +252,33 @@ QVariantMap readSchemeToVariant(const QSpace::IO::ReadScheme& scheme) {
 }
 
 QSpace::IO::ReadScheme variantToReadScheme(const QVariantMap& map) {
-    Q_UNUSED(map)
-    // const QString     type = map.value("type").toString();
-    // const QVariantMap data = map.value("data").toMap();
+    const QString     type = map.value(QStringLiteral("type")).toString();
+    const QVariantMap data = map.value(QStringLiteral("data")).toMap();
 
-    // if (type == QLatin1String("ColumnScheme")) {
-    //     IO::ColumnScheme scheme = variantMapToGadget<IO::ColumnScheme>(data);
-    //     scheme.columnsPolicy =
-    //         variantToGadgetList<IO::ColumnMapping>(data["columnsPolicy"].toList());
-    //     return scheme;
-    // }
-    // if (type == QLatin1String("HDF5ReadScheme"))
+    if (type == QLatin1String("ColumnScheme")) {
+        IO::ColumnScheme scheme = variantMapToGadget<IO::ColumnScheme>(data);
+
+        // Метасистема Qt не конструирует QList<Gadget> автоматически из QVariantList.
+        // Поэтому вложенные списки (columnsPolicy) необходимо маппить вручную.
+        if (data.contains(QStringLiteral("columnsPolicy"))) {
+            scheme.columnsPolicy.clear();
+            const QVariantList list = data.value(QStringLiteral("columnsPolicy")).toList();
+            for (const QVariant& item : list) {
+                scheme.columnsPolicy.append(variantMapToGadget<IO::ColumnMapping>(item.toMap()));
+            }
+        }
+        return scheme;
+    }
+
+    // if (type == QLatin1String("HDF5ReadScheme")) {
     //     return variantMapToGadget<IO::HDF5ReadScheme>(data);
-    // if (type == QLatin1String("DefaultScheme"))
-    //     return IO::DefaultScheme{};
+    // }
+
+    if (type == QLatin1String("DefaultScheme")) {
+        return IO::DefaultScheme{};
+    }
 
     return std::monostate{};
 }
+
 } // namespace QSpace::Reflection

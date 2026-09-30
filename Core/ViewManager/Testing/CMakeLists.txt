@@ -1,1 +1,2 @@
 qspace_add_test(TestViewManagerCreateWindow QSpace::CoreViewManager)
+qspace_add_test(TestViewManagerSerializer QSpace::CoreViewManager)

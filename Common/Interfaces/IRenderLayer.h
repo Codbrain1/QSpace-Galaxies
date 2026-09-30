@@ -20,6 +20,7 @@ public:
   virtual void setSettings(std::shared_ptr<Layers::LayerSettings> settings) = 0;
   virtual void setVisible(bool visible) = 0;
   virtual bool isVisible() const = 0;
+  virtual Layers::RenderLayerType type() const = 0;
 };
 
 // Интерфейс исключительно для VTK

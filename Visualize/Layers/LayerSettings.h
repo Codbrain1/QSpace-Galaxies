@@ -176,24 +176,24 @@ class LayerSettings : public QObject {
         }
     }
 
-    QVariantMap toVariantMap() const {
-        QVariantMap        map;
-        const QMetaObject* mo = metaObject();
-        for (int i = QObject::staticMetaObject.propertyCount(); i < mo->propertyCount(); ++i) {
-            QMetaProperty prop = mo->property(i);
-            map[prop.name()]   = prop.read(this);
-        }
-        return map;
-    }
+    // QVariantMap toVariantMap() const {
+    //     QVariantMap        map;
+    //     const QMetaObject* mo = metaObject();
+    //     for (int i = QObject::staticMetaObject.propertyCount(); i < mo->propertyCount(); ++i) {
+    //         QMetaProperty prop = mo->property(i);
+    //         map[prop.name()]   = prop.read(this);
+    //     }
+    //     return map;
+    // }
 
-    void fromVariantMap(const QVariantMap& map) {
-        const QMetaObject* mo = metaObject();
-        for (auto it = map.constBegin(); it != map.constEnd(); ++it) {
-            int idx = mo->indexOfProperty(it.key().toUtf8().constData());
-            if (idx >= 0)
-                mo->property(idx).write(this, it.value());
-        }
-    }
+    // void fromVariantMap(const QVariantMap& map) {
+    //     const QMetaObject* mo = metaObject();
+    //     for (auto it = map.constBegin(); it != map.constEnd(); ++it) {
+    //         int idx = mo->indexOfProperty(it.key().toUtf8().constData());
+    //         if (idx >= 0)
+    //             mo->property(idx).write(this, it.value());
+    //     }
+    // }
 
     virtual QString propertyDisplayName(const QString& propName) const {
         static const QMap<QString, QString> baseNames = {{"isVisible", "Видимость слоя"},

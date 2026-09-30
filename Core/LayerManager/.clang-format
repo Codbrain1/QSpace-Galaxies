@@ -1,0 +1,97 @@
+# .clang-format
+Language:        Cpp
+BasedOnStyle:    LLVM
+
+# Основные параметры, подогнанные под твой стиль
+IndentWidth:                     4
+TabWidth:                        4
+UseTab:                          Never
+ColumnLimit:                     120
+BreakBeforeBraces:               Attach
+
+AllowShortFunctionsOnASingleLine: None
+AllowShortIfStatementsOnASingleLine: false
+AllowShortLoopsOnASingleLine:    false
+
+SpaceBeforeParens:               Custom
+SpaceAfterCStyleCast:            false
+SpaceBeforeCpp11BracedList:      false
+
+# Пробелы внутри скобок и лямбд
+SpaceInEmptyParentheses:         false
+SpacesInParentheses:             false
+SpacesInSquareBrackets:          false
+SpacesInAngles:                  false
+
+# Отступ продолжения строк
+ContinuationIndentWidth:         4
+AlignAfterOpenBracket:           Align
+
+# ──────────────── КЛЮЧЕВЫЕ НАСТРОЙКИ ДЛЯ ВЫРАВНИВАНИЯ ────────────────
+AlignConsecutiveAssignments:     true
+AlignConsecutiveDeclarations:    true
+AlignConsecutiveMacros:          true
+AlignTrailingComments:           true
+
+# Разрывы строк
+BinPackArguments:                false
+BinPackParameters:               false
+AllowShortCaseLabelsOnASingleLine: false
+IndentCaseLabels:                true
+
+# Пробелы вокруг операторов
+SpaceAroundPointerQualifiers:    Default
+SpaceBeforeAssignmentOperators:  true
+SpaceBeforeRangeBasedForLoopColon: true
+
+# Специфично для твоего кода
+DerivePointerAlignment:          false
+PointerAlignment:                Left
+
+# Не ломать длинные строки в некоторых местах
+AllowAllParametersOfDeclarationOnNextLine: false
+AllowAllArgumentsOnNextLine:     false
+AlwaysBreakAfterReturnType:      None
+AlwaysBreakAfterDefinitionReturnType: None
+
+# Ключевой момент: не переносить тело функции/цикла на новую строку
+BraceWrapping:
+  AfterClass:                    false
+  AfterControlStatement:         false
+  AfterEnum:                     false
+  AfterFunction:                 false
+  AfterNamespace:                false
+  AfterObjCDeclaration:          false
+  AfterStruct:                   false
+  AfterUnion:                    false
+  BeforeCatch:                   false
+  BeforeElse:                    false
+  IndentBraces:                  false
+
+# Дополнительно
+KeepEmptyLinesAtTheStartOfBlocks: false
+
+# Комментарии
+CommentPragmas:                  '^ IWYU pragma:'
+ReflowComments:                  true
+SortIncludes:                    true
+SeparateDefinitionBlocks: Always
+MaxEmptyLinesToKeep: 3
+
+# Пробел перед '... : public BaseLayer'
+SpaceBeforeInheritanceColon: true
+ConstructorInitializerAllOnOneLineOrOnePerLine: true
+
+IncludeCategories:
+  - Regex:           '^"(Common|Core|Visualize|Interfaces)/'
+    Priority:        1
+  - Regex:           '^"Core/'
+    Priority:        2
+  - Regex:           '^<Q'
+    Priority:        3
+  - Regex:           '^<vtk'
+    Priority:        4
+  - Regex:           '.*'
+    Priority:        5
+# Для #pragma omp — не трогать
+Cpp11BracedListStyle:            true

@@ -8,21 +8,22 @@
 #include <QUuid>
 #include <quuid.h>
 #include "Enums/LayerEnums.h"
+#include "layermanager_export.h"
 #include <memory>
 
 namespace QSpace::Core {
 
 
-class LayerManager : public QObject {
+class LAYERMANAGER_EXPORT LayerManager : public QObject {
     Q_OBJECT
   public:
     explicit LayerManager(QObject* parent = nullptr);
     ~LayerManager();
 
-    QUuid createLayer(std::shared_ptr<DataNode>                       node,
-                      std::shared_ptr<Visualize::Views::AbstractView> view);
+    QUuid createLayer(std::shared_ptr<DataNode> node, std::shared_ptr<Visualize::Views::AbstractView> view);
 
     std::shared_ptr<Visualize::Layers::Layer> createLayerCopy(const QUuid& etalonLayerId);
+    bool                                      registerLayer(std::shared_ptr<Visualize::Layers::Layer> layer);
 
     void removeLayer(const QUuid& layerId);
     void removeAllLayersForNode(const QUuid& nodeId);

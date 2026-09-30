@@ -67,7 +67,7 @@ inline QVariantMap QObjectToVariantMap(const T* obj) {
 // раскладывает из вариант мапы поля в QObject
 template <typename T>
     requires std::derived_from<T, QObject>
-inline DeserializationResult variantMapToQObject(const QVariantMap& map, const T* obj) {
+inline DeserializationResult variantMapToQObject(const QVariantMap& map, T* obj) {
     return details::variantMapToQObject(map, obj);
 }
 
@@ -86,6 +86,7 @@ template <typename T> QVariantMap gadgetToVariantMap(const T& obj) {
 }
 
 // преобразует QVariantMap в тип T
+// преобразует QVariantMap в тип T
 template <typename T> T variantMapToGadget(const QVariantMap& map) {
     T                  obj{};
     const QMetaObject& mo = T::staticMetaObject;
@@ -96,7 +97,7 @@ template <typename T> T variantMapToGadget(const QVariantMap& map) {
         auto it = map.find(QString::fromLatin1(prop.name()));
         if (it == map.end())
             continue;
-        QVariant restored = details::deserializeValue(prop.userType(), it.value());
+        QVariant restored = details::deserializeValue(prop.metaType().id(), it.value(), prop);
         prop.writeOnGadget(&obj, restored);
     }
     return obj;

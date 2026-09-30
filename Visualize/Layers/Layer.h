@@ -6,6 +6,7 @@
 #include <QObject>
 #include <QString>
 #include <QUuid>
+#include <quuid.h>
 #include "LayerSettings.h"
 #include <memory>
 
@@ -71,6 +72,12 @@ class Layer : public QObject {
     }
 
     // Сеттеры для Q_PROPERTY
+    void setLayerId(const QUuid& id) {
+        if (m_layerId != id) {
+            m_layerId = id;
+        }
+    }
+
     void setName(const QString& name) {
         if (m_name != name) {
             m_name = name;

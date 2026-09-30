@@ -5,6 +5,7 @@
 #include <QOpenGLShaderProgram>
 #include <QOpenGLVertexArrayObject>
 #include <QScopedPointer>
+#include "Enums/LayerEnums.h"
 #include "SPHPointsLayerSettings.h"
 #include <memory>
 
@@ -48,6 +49,9 @@ class SPHRendererLayer : public IOpenGLRenderLayer {
     void releaseGL(QOpenGLFunctions_3_3_Core* gl) override;
     bool boundingBox(QVector3D& outMin, QVector3D& outMax) const override;
 
+    Layers::RenderLayerType type() const override {
+        return RenderLayerType::SPH;
+    };
 
   private:
     void buildShaders();

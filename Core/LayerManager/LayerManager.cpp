@@ -13,8 +13,7 @@ LayerManager::LayerManager(QObject* parent) : QObject(parent) {
 
 LayerManager::~LayerManager() = default;
 
-QUuid LayerManager::createLayer(std::shared_ptr<DataNode>                       node,
-                                std::shared_ptr<Visualize::Views::AbstractView> view) {
+QUuid LayerManager::createLayer(std::shared_ptr<DataNode> node, std::shared_ptr<Visualize::Views::AbstractView> view) {
     if (!node || !view || !node->isLoaded()) {
         qCWarning(LogCore) << "LayerManager::createLayer - Invalid node or view";
         return QUuid();
@@ -45,8 +44,7 @@ QUuid LayerManager::createLayer(std::shared_ptr<DataNode>                       
     return layer->layerId();
 }
 
-std::shared_ptr<Visualize::Layers::Layer>
-LayerManager::createLayerCopy(const QUuid& etalonLayerId) {
+std::shared_ptr<Visualize::Layers::Layer> LayerManager::createLayerCopy(const QUuid& etalonLayerId) {
     auto it = m_layers.find(etalonLayerId);
     if (it == m_layers.end())
         return nullptr;
@@ -55,20 +53,45 @@ LayerManager::createLayerCopy(const QUuid& etalonLayerId) {
 
     auto layer = std::make_shared<Visualize::Layers::Layer>(etalonLayer->name(), view);
 
-    auto renderEngine = Visualize::Layers::LayerFactory::createLayerRenderer(
-        Visualize::Layers::RenderLayerType::SPH);
+    auto renderEngine = Visualize::Layers::LayerFactory::createLayerRenderer(Visualize::Layers::RenderLayerType::SPH);
 
     if (!renderEngine)
         return nullptr;
 
     layer->assignEngine(renderEngine);
     layer->update();
-    layer->getSettings()->fromVariantMap(etalonLayer->getSettings()->toVariantMap());
+    // TODO: заменить на методы рефлексии
+    // layer->getSettings()->fromVariantMap(etalonLayer->getSettings()->toVariantMap());
 
     // 5. Регистрация в индексах
     m_layers.insert(layer->layerId(), layer);
     m_viewToLayers[view.get()].append(layer->layerId());
     return layer;
+}
+
+bool LayerManager::registerLayer(std::shared_ptr<Visualize::Layers::Layer> layer) {
+    if (!layer) {
+        return false;
+    }
+
+    const QUuid id = layer->layerId();
+    if (m_layers.contains(id)) {
+        qCWarning(LogCore) << "Layer with ID already exists:" << id;
+        return false;
+    }
+
+    m_layers.insert(id, layer);
+
+    if (!layer->dataNodeId().isNull()) {
+        m_nodeToLayers[layer->dataNodeId()].append(id);
+    }
+
+    if (auto view = layer->getView().lock()) {
+        m_viewToLayers[view.get()].append(id);
+    }
+
+    emit layerCreated(id);
+    return true;
 }
 
 void LayerManager::removeLayer(const QUuid& layerId) {
@@ -142,8 +165,7 @@ std::shared_ptr<Visualize::Layers::Layer> LayerManager::getLayer(const QUuid& la
     return m_layers.value(layerId, nullptr);
 }
 
-QList<std::shared_ptr<Visualize::Layers::Layer>>
-LayerManager::getLayersForNode(const QUuid& nodeId) const {
+QList<std::shared_ptr<Visualize::Layers::Layer>> LayerManager::getLayersForNode(const QUuid& nodeId) const {
     QList<std::shared_ptr<Visualize::Layers::Layer>> result;
     for (const auto& id : m_nodeToLayers.value(nodeId)) {
         if (m_layers.contains(id))
@@ -162,7 +184,7 @@ void LayerManager::updateNodeMasterSettings(const QUuid& nodeId) {
 }
 
 // 1. Создание слоев — оставляем как есть, это надежно
-void LayerManager::createLayersForContainer(std::shared_ptr<Snapshot> container,
+void LayerManager::createLayersForContainer(std::shared_ptr<Snapshot>                       container,
                                             std::shared_ptr<Visualize::Views::AbstractView> view) {
     if (!container || !view)
         return;

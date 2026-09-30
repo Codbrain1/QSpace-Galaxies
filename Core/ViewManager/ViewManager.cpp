@@ -40,7 +40,8 @@ bool ViewManager::addView(std::shared_ptr<Visualize::Views::AbstractView> view) 
     if (!view) {
         return false;
     }
-    auto id = view->id();
+    const auto id   = view->id();
+    const auto type = view->viewType();
 
     connect(view.get(), &Visualize::Views::AbstractView::updateRequested, this, [this, id]() {
         emit viewUpdateRequested(id); // Адресное уведомление!
@@ -53,7 +54,7 @@ bool ViewManager::addView(std::shared_ptr<Visualize::Views::AbstractView> view) 
     }
 
     // 6. Уведомляем систему (AppCore -> MainWindow) о том, что окно создано
-    emit viewCreated(id, view->viewType());
+    emit viewCreated(id, type);
     return true;
 }
 

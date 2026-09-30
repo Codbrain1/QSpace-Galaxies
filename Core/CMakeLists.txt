@@ -20,7 +20,7 @@ target_link_libraries(Core INTERFACE
             QSpace::CoreObjectRegistry
             DataManager
             LogManager
-            LayerManager
+            QSpace::CoreLayerManager
             AppCore
             QSpace::CoreViewManager
             StyleManager

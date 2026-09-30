@@ -4,6 +4,7 @@
 #include <QOpenGLBuffer>
 #include <QOpenGLShaderProgram>
 #include <QOpenGLVertexArrayObject>
+#include "Enums/LayerEnums.h"
 #include "ParticlePointsLayerSettings.h"
 
 namespace QSpace::Visualize::Layers {
@@ -40,6 +41,10 @@ class ParticleRendererLayer : public IOpenGLRenderLayer {
     void render(QOpenGLFunctions_3_3_Core* gl, const Visualize::RenderContext& ctx) override;
     void releaseGL(QOpenGLFunctions_3_3_Core* gl) override;
     bool boundingBox(QVector3D& outMin, QVector3D& outMax) const override;
+
+    virtual Layers::RenderLayerType type() const override {
+        return RenderLayerType::Particles;
+    };
 
   private:
     void buildShader();

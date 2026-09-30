@@ -6,6 +6,7 @@
 #include <QOpenGLVertexArrayObject>
 #include <QScopedPointer>
 #include "BinningPointsLayerSettings.h"
+#include "Enums/LayerEnums.h"
 
 namespace QSpace::Visualize::Layers {
 
@@ -40,6 +41,10 @@ class BinningRendererLayer : public IOpenGLRenderLayer {
     void render(QOpenGLFunctions_3_3_Core* gl, const Visualize::RenderContext& ctx) override;
     void releaseGL(QOpenGLFunctions_3_3_Core* gl) override;
     bool boundingBox(QVector3D& outMin, QVector3D& outMax) const override;
+
+    virtual Layers::RenderLayerType type() const override {
+        return RenderLayerType::Binning;
+    };
 
   private:
     void      buildShaders();

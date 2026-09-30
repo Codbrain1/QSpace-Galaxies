@@ -1,5 +1,6 @@
 #pragma once
 #include "Common/Enums/IOEnums.h"
+#include "Common/Enums/LayerEnums.h"
 #include "Common/Enums/ViewEnums.h"
 #include "Common/Enums/VisualizeBaseEnums.h"
 #include "Common/Structures/FileSchemeStructures.h"
@@ -99,16 +100,6 @@ class ViewManagerDTO {
     QList<ViewDTO> views;
 };
 
-class LayerSettingsDTO {
-    Q_GADGET
-    Q_PROPERTY(QString settingsType MEMBER settingsType)
-    Q_PROPERTY(QVariantMap settings MEMBER settings)
-  public:
-    QString     settingsType;
-    QVariantMap settings; // сериализуемый вариант настроек конкретного типа View
-    bool        operator==(const LayerSettingsDTO&) const = default;
-};
-
 class LayerDTO {
     Q_GADGET
     Q_PROPERTY(QUuid layerId MEMBER layerId)
@@ -116,15 +107,17 @@ class LayerDTO {
     Q_PROPERTY(QUuid viewId MEMBER viewId)
     Q_PROPERTY(QString name MEMBER name)
     Q_PROPERTY(bool isSynced MEMBER isSynced)
-    Q_PROPERTY(LayerSettingsDTO settings MEMBER settings)
+    Q_PROPERTY(QSpace::Visualize::Layers::RenderLayerType renderType MEMBER renderType)
+    Q_PROPERTY(QVariantMap settings MEMBER settings)
   public:
-    QUuid            layerId;
-    QUuid            nodeId;   // На какой DataNode ссылается
-    QUuid            viewId;   // В каком окне отрисовывается
-    QString          name;     // Имя слоя (может отличаться от имени DataNode)
-    bool             isSynced; // Синхронизирован ли слой с мастер-
-    LayerSettingsDTO settings; // Настройки ИМЕННО ЭТОГО слоя
-    bool             operator==(const LayerDTO&) const = default;
+    QUuid                              layerId;
+    QUuid                              nodeId;   // На какой DataNode ссылается
+    QUuid                              viewId;   // В каком окне отрисовывается
+    QString                            name;     // Имя слоя (может отличаться от имени DataNode)
+    bool                               isSynced; // Синхронизирован ли слой с мастер-
+    Visualize::Layers::RenderLayerType renderType;
+    QVariantMap settings; // сериализуемый вариант настроек конкретного типа View
+    bool        operator==(const LayerDTO&) const = default;
 };
 
 class LayerManagerDTO {
