@@ -8,7 +8,9 @@ SessionManager.cpp
 target_include_directories(SessionManager PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../..)
 target_link_libraries(SessionManager PUBLIC
             project_config
-            ObjectRegistry
+            QSpace::CoreObjectRegistry
+            QSpace::CoreLayerManager
+            QSpace::CoreViewManager
             QSpace::Session
             QSpace::Visualize
             QSpace::Common

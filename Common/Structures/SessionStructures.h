@@ -9,6 +9,8 @@
 #include <QList>
 #include <QMap>
 #include <qlist.h>
+#include <qsharedpointer.h>
+#include <qtmetamacros.h>
 #include <quuid.h>
 #include <qvariant.h>
 #include "DataNodeMetaData.h"
@@ -17,6 +19,14 @@
 #include <float.h>
 
 namespace QSpace::Session {
+Q_NAMESPACE
+
+enum class ProjectFormat {
+    Json,
+    Xml
+};
+Q_ENUM_NS(ProjectFormat)
+
 class ExperimentDTO {
     Q_GADGET
     Q_PROPERTY(QUuid id MEMBER id)
@@ -143,6 +153,20 @@ class ColorMapManagerDTO {
     QList<Visualize::ColorMap> colorMaps;
 };
 
+class ProjectDTO {
+    Q_GADGET
+    Q_PROPERTY(QSpace::Session::ObjectRegistryDTO objregDTO MEMBER objregDTO)
+    Q_PROPERTY(QSpace::Session::ViewManagerDTO viewmanDTO MEMBER viewmanDTO)
+    Q_PROPERTY(QSpace::Session::LayerManagerDTO layermanDTO MEMBER layermanDTO)
+    Q_PROPERTY(QSpace::Session::ColorMapManagerDTO colormapmanDTO MEMBER colormapmanDTO)
+
+  public:
+    ObjectRegistryDTO  objregDTO;
+    ViewManagerDTO     viewmanDTO;
+    LayerManagerDTO    layermanDTO;
+    ColorMapManagerDTO colormapmanDTO;
+};
+
 struct [[deprecated("Use DataNodeDTO instead")]] DataNodeState {
     std::shared_ptr<Visualize::Layers::LayerSettings> settings;
     QUuid                                             id;
@@ -171,9 +195,22 @@ struct [[deprecated("Use ProjectDTO instead")]] ProjectState {
     QList<LayerState>    layersStates;
 };
 
-struct CurrentSession {
+struct [[deprecated("Don't use this structure")]] CurrentSession {
     QString projectName;
     QString projectFilePath;
     bool    isDirty = false;
 };
 } // namespace QSpace::Session
+
+Q_DECLARE_METATYPE(QSpace::Session::ExperimentDTO)
+Q_DECLARE_METATYPE(QSpace::Session::SnapshotDTO)
+Q_DECLARE_METATYPE(QSpace::Session::DataNodeDTO)
+Q_DECLARE_METATYPE(QSpace::Session::ObjectRegistryDTO)
+Q_DECLARE_METATYPE(QSpace::Session::ViewDTO)
+Q_DECLARE_METATYPE(QSpace::Session::ViewManagerDTO)
+Q_DECLARE_METATYPE(QSpace::Session::LayerDTO)
+Q_DECLARE_METATYPE(QSpace::Session::LayerManagerDTO)
+Q_DECLARE_METATYPE(QSpace::Session::FileSchemeRegistryDTO)
+Q_DECLARE_METATYPE(QSpace::Session::ColorMapManagerDTO)
+Q_DECLARE_METATYPE(QSpace::Session::ProjectDTO)
+Q_DECLARE_METATYPE(QSpace::Session::ProjectFormat)

@@ -1,31 +1,34 @@
 #include "SessionManager.h"
+#include "Common/Structures/SessionStructures.h"
+#include "Core/LayerManager/LayerManagerSerializer.h"
+#include "Core/ObjectRegistry/ObjectRegistrySerializer.h"
+#include "Core/ViewManager/ViewManager.h"
+#include "Core/ViewManager/ViewManagerSerializer.h"
+#include "Visualize/ColorMapManager/ColorMapManagerSerializer.h"
 #include <qfileinfo.h>
 #include <qjsonobject.h>
 #include <qstringview.h>
 #include "Session/ProjectSerializer.h"
+#include "Session/Reflection.h"
 
 namespace QSpace::Core {
 
 SessionManager::SessionManager(QSpace::Core::ObjectRegistry* registry,
                                QSpace::Core::LayerManager*   layerManager,
+                               QSpace::Core::ViewManager*    viewManager,
                                QObject*                      parent)
-    : QObject(parent), m_registry(registry), m_layerManager(layerManager) {
+    : QObject(parent),
+      m_registry(registry),
+      m_layerManager(layerManager),
+      m_viewManager(viewManager) {
     // ВАЖНО: Инициализируем хранилище, иначе будет краш!
     m_storage_session = std::make_unique<QSpace::Session::SessionStorage>();
 }
 
-std::optional<QSpace::Session::ProjectState> SessionManager::loadProject(const QString& filePath) {
-    auto data = m_storage_session->load(filePath);
-    if (data.has_value()) {
-        auto projectState = QSpace::Session::ProjectSerializer::deserialize(data.value());
-        if (projectState.has_value()) {
-            projectState->projectName = QFileInfo(filePath).fileName();
-            return projectState;
-        }
-    }
-    return std::nullopt;
-}
-
+// ===================================================
+// savePallete() -- сохраняет палитру
+// loadPallete() -- загружает палитру
+// ===================================================
 bool SessionManager::savePalette(const Visualize::ColorMap& map, const QString& filePath) {
     auto jsonFile = QSpace::Session::ProjectSerializer::serializeColorMap(
         map); // TODO преренести реализацию метода в ColorMapSerializer
@@ -44,44 +47,53 @@ std::optional<Visualize::ColorMap> SessionManager::loadPalette(const QString& fi
     return std::nullopt;
 }
 
-bool SessionManager::saveProject(const QSpace::Session::CurrentSession& curSession) {
-    if (curSession.projectFilePath.isEmpty())
-        return false;
-
-    QSpace::Session::ProjectState state;
-    state.projectName = curSession.projectName;
-
-    for (const auto& node : m_registry->getAllNodes()) {
-        QSpace::Session::DataNodeState ds;
-        ds.id    = node->id;
-        ds.label = node->label;
-        ds.path  = node->path;
-        // ds.settings = *node->masterSettings.get();
-        ds.stats  = node->stats;
-        ds.type   = node->type;
-        ds.format = node->format;
-        // ds.scheme = node->scheme;
-        state.nodesStates.append(ds);
-    }
-    // 2. Сохраняем ВИЗУАЛЬНОЕ ПРЕДСТАВЛЕНИЕ (Слои)
-    // Предполагается, что в LayerManager есть метод getAllLayers() возвращающий
-    // QList<shared_ptr<Layer>>
-    // for (const auto& layer : m_layerManager->getAllLayers()) {
-    //     QSpace::Session::LayerState ls;
-    //     ls.layerId = layer->layerId;
-    //     ls.nodeId  = layer->dataNodeId;
-
-    //     // Предполагаем, что у Views::AbstractView есть метод для получения его ID
-    //     if (auto view = layer->view.lock()) {
-    //         ls.viewId = view->get();
-    //     }
-
-    //     ls.settings = *(layer->settings); // Сохраняем индивидуальные настройки слоя
-    //     state.layersStates.append(ls);
-    // }
-
-    QByteArray data = QSpace::Session::ProjectSerializer::serialize(state);
-    return m_storage_session->save(curSession.projectFilePath, data);
+// ===================================================
+// saveProject() -- создает DTO и сохраняет проект
+// loadProject() -- загружает DTO и восстанавливает состояние приложения
+// ===================================================
+bool SessionManager::saveProject(const QString& filePath) {
+    const QSpace::Session::ProjectDTO dto            = createProjectDTO();
+    const auto                        projVariantMap = QSpace::Reflection::gadgetToVariantMap(dto);
+    return m_storage_session->save(filePath, data);
 }
 
+bool SessionManager::loadProject(const QString& filePath) {
+    const auto data = m_storage_session->load(filePath);
+    if (!data.has_value())
+        return false;
+    auto dto = Session::ProjectSerializer::deserialize(*data);
+    if (!dto.has_value())
+        return false;
+
+    return fromProjectDTO(dto.value());
+}
+
+QSpace::Session::ProjectDTO SessionManager::createProjectDTO() const {
+    QSpace::Session::ProjectDTO dto;
+
+    dto.objregDTO      = ObjectRegistrySerializer::toDTO(m_registry).value();
+    dto.layermanDTO    = LayerManagerSerializer::toDTO(m_layerManager).value();
+    dto.viewmanDTO     = ViewManagerSerializer::toDTO(m_viewManager).value();
+    dto.colormapmanDTO = QSpace::Visualize::ColorMapManagerSerializer::toDTO();
+
+    return dto;
+}
+
+bool SessionManager::fromProjectDTO(const QSpace::Session::ProjectDTO& dto) {
+    bool is_succses = ObjectRegistrySerializer::fromDTO(dto.objregDTO, m_registry);
+    is_succses      = is_succses && ViewManagerSerializer::fromDTO(dto.viewmanDTO, m_viewManager);
+    QSpace::Visualize::ColorMapManagerSerializer::fromDTO(dto.colormapmanDTO);
+
+    LayerManagerSerializer::NodeResolver nodeRes =
+        [&](const QUuid& id) -> std::shared_ptr<DataNode> { return m_registry->getNode(id); };
+
+    LayerManagerSerializer::ViewResolver viewRes =
+        [&](const QUuid& id) -> std::shared_ptr<QSpace::Visualize::Views::AbstractView> {
+        return m_viewManager->getView(id);
+    };
+
+    is_succses = is_succses &&
+                 LayerManagerSerializer::fromDTO(dto.layermanDTO, m_layerManager, nodeRes, viewRes);
+    return is_succses;
+}
 } // namespace QSpace::Core

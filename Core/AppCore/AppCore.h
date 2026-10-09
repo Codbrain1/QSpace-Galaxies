@@ -81,7 +81,6 @@ class AppCore : public QObject {
     std::unique_ptr<LayerManager>       m_layerManager;
     std::unique_ptr<SessionManager>     m_sessionManager;
     std::unique_ptr<FileSchemeRegistry> m_fileSchemeRegistry;
-    QSpace::Session::CurrentSession     m_session_state;
 
     // модели данных
     std::unique_ptr<Models::DataTreeModel> m_dataTreeModel;

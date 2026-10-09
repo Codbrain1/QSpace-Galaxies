@@ -54,6 +54,7 @@ class ProjectController : public QObject {
     Core::DataManager*    m_dataManager;
     DataController*       m_dataController; // Нужен для передачи состояния при загрузке
 
+    [[deprecated]]
     Session::CurrentSession m_sessionState;
 };
 

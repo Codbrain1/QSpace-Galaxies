@@ -12,8 +12,6 @@
 #include <memory>
 
 namespace QSpace::Core {
-
-
 class LAYERMANAGER_EXPORT LayerManager : public QObject {
     Q_OBJECT
   public:

@@ -26,13 +26,14 @@
 namespace QSpace::Core {
 AppCore::AppCore(QObject* parent) : QObject(parent) {
     // 1. Инициализация менеджеров (Базовый слой)
-    m_taskManager    = std::make_unique<TaskManager>();
-    m_objectRegistry = std::make_unique<ObjectRegistry>();
-    m_dataManager    = std::make_unique<DataManager>(m_taskManager.get());
-    m_viewManager    = std::make_unique<ViewManager>();
-    m_layerManager   = std::make_unique<LayerManager>();
-    m_sessionManager =
-        std::make_unique<SessionManager>(m_objectRegistry.get(), m_layerManager.get());
+    m_taskManager        = std::make_unique<TaskManager>();
+    m_objectRegistry     = std::make_unique<ObjectRegistry>();
+    m_dataManager        = std::make_unique<DataManager>(m_taskManager.get());
+    m_viewManager        = std::make_unique<ViewManager>();
+    m_layerManager       = std::make_unique<LayerManager>();
+    m_sessionManager     = std::make_unique<SessionManager>(m_objectRegistry.get(),
+                                                            m_layerManager.get(),
+                                                            m_viewManager.get());
     m_fileSchemeRegistry = std::make_unique<FileSchemeRegistry>();
 
     // 2. Инициализация контроллеров (Внедрение зависимостей)

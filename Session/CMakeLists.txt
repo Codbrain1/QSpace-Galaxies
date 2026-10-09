@@ -2,8 +2,10 @@ add_subdirectory(Testing)
 add_library(Session STATIC)
 add_library(QSpace::Session ALIAS Session)
 target_sources(Session PRIVATE 
-    ProjectSerializer.h
-    ProjectSerializer.cpp
+    ProjectFormatFactory.h
+    ProjectFormatFactory.cpp
+    # ProjectSerializer.h
+    # ProjectSerializer.cpp
     SessionStorage.h
     SessionStorage.cpp
     Reflection.cpp
