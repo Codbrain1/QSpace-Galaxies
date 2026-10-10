@@ -185,19 +185,19 @@ QList<std::shared_ptr<Visualize::Layers::Layer>> LayerManager::getLayersForNode(
 }
 
 void LayerManager::updateNodeMasterSettings(const QUuid& nodeId) {
-    // const auto layers = getLayersForNode(nodeId);
-    // const auto node =
-    //     (!layers.isEmpty() && layers.front()) ? layers.front()->dataNode() : nullptr;
+    const auto layers = getLayersForNode(nodeId);
+    const auto node =
+        (!layers.isEmpty() && layers.front()) ? layers.front()->dataNode() : nullptr;
 
-    // for (const auto& layer : layers) {
-    //     if (!layer || !layer->IsSyncedWithMaster())
-    //         continue;
+    for (const auto& layer : layers) {
+        if (!layer || !layer->IsSyncedWithMaster())
+            continue;
 
-    //     if (node)
-    //         layer->setData(node);
-    //     else
-    //         layer->update();
-    // }
+        if (node)
+            layer->setData(node);
+
+        layer->update();
+    }
 }
 
 // 1. Создание слоев — оставляем как есть, это надежно

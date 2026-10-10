@@ -63,9 +63,9 @@ class Layer : public QObject {
         return m_dataNodeId;
     }
 
-    // std::shared_ptr<Core::DataNode> dataNode() const {
-    //     return m_dataNode.lock();
-    // }
+    std::shared_ptr<Core::DataNode> dataNode() const {
+        return m_dataNode.lock();
+    }
 
     QString name() const {
         return m_name;

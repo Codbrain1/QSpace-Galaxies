@@ -72,11 +72,11 @@ void AppCore::initialize() {
             m_dataController.get(),
             &Controllers::DataController::onRequestDataLoad,
             Qt::QueuedConnection);
-    // connect(m_dataController.get(),
-    //         &Controllers::DataController::sceneUpdateRequested,
-    //         m_viewController.get(),
-    //         &Controllers::ViewController::sceneUpdateRequested,
-    //         Qt::QueuedConnection);
+    connect(m_dataController.get(),
+            &Controllers::DataController::sceneUpdateRequested,
+            m_viewController.get(),
+            &Controllers::ViewController::sceneUpdateRequested,
+            Qt::QueuedConnection);
 
     // регистрируем стандартные схемы для менеджера схем файлов
     m_fileSchemeRegistry->registerStandartPresets();
