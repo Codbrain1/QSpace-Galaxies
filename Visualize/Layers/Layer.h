@@ -63,6 +63,10 @@ class Layer : public QObject {
         return m_dataNodeId;
     }
 
+    // std::shared_ptr<Core::DataNode> dataNode() const {
+    //     return m_dataNode.lock();
+    // }
+
     QString name() const {
         return m_name;
     }
@@ -124,6 +128,8 @@ class Layer : public QObject {
     }
 
     void setData(std::shared_ptr<Core::DataNode> node) {
+        if (!node || !m_renderEngine)
+            return;
         m_dataNode   = node;
         m_dataNodeId = node->id;
         m_renderEngine->setData(node);

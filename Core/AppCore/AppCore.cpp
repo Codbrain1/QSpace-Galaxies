@@ -44,7 +44,8 @@ AppCore::AppCore(QObject* parent) : QObject(parent) {
     m_dataController = std::make_unique<Controllers::DataController>(m_dataManager.get(),
                                                                      m_objectRegistry.get(),
                                                                      m_layerManager.get(),
-                                                                     m_viewManager.get());
+                                                                     m_viewManager.get(),
+                                                                     m_fileSchemeRegistry.get());
 
     m_projectController = std::make_unique<Controllers::ProjectController>(m_sessionManager.get(),
                                                                            m_objectRegistry.get(),
@@ -71,6 +72,11 @@ void AppCore::initialize() {
             m_dataController.get(),
             &Controllers::DataController::onRequestDataLoad,
             Qt::QueuedConnection);
+    // connect(m_dataController.get(),
+    //         &Controllers::DataController::sceneUpdateRequested,
+    //         m_viewController.get(),
+    //         &Controllers::ViewController::sceneUpdateRequested,
+    //         Qt::QueuedConnection);
 
     // регистрируем стандартные схемы для менеджера схем файлов
     m_fileSchemeRegistry->registerStandartPresets();

@@ -5,6 +5,9 @@
 #include "Core/SessionManager/SessionManager.h"
 #include <QFileInfo>
 #include "DataController.h"
+#include "Session/ProjectFormatFactory.h"
+#include "Structures/SessionStructures.h"
+
 
 namespace QSpace::Core::Controllers {
 
@@ -48,12 +51,18 @@ void ProjectController::saveCurrentProjectAs(const QString& projectPath) {
     if (projectPath.isEmpty())
         return;
 
+    const auto format = Session::ProjectFormatFactory::fromFilePath(".json");
+    if (!format.has_value()) {
+        qCWarning(LogCore) << "Unsupported project format:" << projectPath;
+        return;
+    }
+
     m_sessionState.projectFilePath = projectPath;
     if (m_sessionState.projectName.isEmpty()) {
         m_sessionState.projectName = QFileInfo(projectPath).baseName();
     }
 
-    bool ok = m_sessionManager->saveProject(m_sessionState);
+    const bool ok = m_sessionManager->saveProject(m_sessionState.projectFilePath, *format);
     if (ok) {
         m_sessionState.isDirty = false;
         emit sessionStateChanged(m_sessionState);
@@ -63,30 +72,24 @@ void ProjectController::saveCurrentProjectAs(const QString& projectPath) {
 }
 
 void ProjectController::openProject(const QString& projectPath) {
-    auto newState = m_sessionManager->loadProject(projectPath);
-    if (!newState.has_value()) {
+    if (projectPath.isEmpty()) {
+        return;
+    }
+
+    const bool isLoaded = m_sessionManager->loadProject(projectPath);
+    if (!isLoaded) {
         qCCritical(LogCore) << "The project has not been opened: " << projectPath;
         return;
     }
 
-    m_sessionState.projectName     = newState->projectName;
+    // ObjectRegistry and LayerManager now contain the restored lightweight
+    // metadata. Load the corresponding files asynchronously so layers become
+    // renderable without requiring manual selection in the tree.
+    m_dataController->loadRestoredNodes();
+
+    m_sessionState.projectName     = QFileInfo(projectPath).baseName();
     m_sessionState.projectFilePath = projectPath;
     m_sessionState.isDirty         = false;
-
-    // Очищаем старые данные перед загрузкой новых
-    m_objectRegistry->clear();
-
-    // 1. Передаем "шпаргалку" восстановления в DataController
-    QMap<QString, Session::DataNodeState> restoringMap;
-    for (const auto& nodeState : newState->nodesStates) {
-        restoringMap.insert(nodeState.path, nodeState);
-    }
-    m_dataController->prepareNodesForRestoration(restoringMap);
-
-    // 2. Запускаем асинхронный импорт файлов проекта
-    for (const auto& nodeState : newState->nodesStates) {
-        m_dataManager->importDataAsync(nodeState.path, nodeState.scheme);
-    }
 
     emit sessionStateChanged(m_sessionState);
 }

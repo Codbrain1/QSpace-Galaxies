@@ -1,14 +1,14 @@
 ---
 id: "colormapmanager-dto-2026-09-24"
-status: "review"
+status: "done"
 priority: "medium"
 assignee: null
 epic: "functional"
 dueDate: null
 created: "2026-09-23T21:53:04.335Z"
-modified: "2026-10-08T17:40:50.798Z"
-completedAt: null
+modified: "2026-10-09T16:47:37.401Z"
+completedAt: "2026-10-09T16:47:37.401Z"
 labels: []
-order: "Zz"
+order: "Zz4"
 ---
 # реализовать сериализацию ColorMapManager в DTO

@@ -1,5 +1,6 @@
 #pragma once
 #include "Common/Enums/IOEnums.h"
+#include "Core/FileSchemeRegistry/FileSchemeRegistry.h"
 #include "Visualize/Layers/Layer.h"
 #include <QMap>
 #include <QObject>
@@ -29,11 +30,12 @@ namespace QSpace::Core::Controllers {
 class DataController : public QObject {
     Q_OBJECT
   public:
-    explicit DataController(Core::DataManager*    dataManager,
-                            Core::ObjectRegistry* objectRegistry,
-                            Core::LayerManager*   layerManager,
-                            Core::ViewManager*    viewManager,
-                            QObject*              parent = nullptr);
+    explicit DataController(Core::DataManager*        dataManager,
+                            Core::ObjectRegistry*     objectRegistry,
+                            Core::LayerManager*       layerManager,
+                            Core::ViewManager*        viewManager,
+                            Core::FileSchemeRegistry* fileSchemeRegistry,
+                            QObject*                  parent = nullptr);
 
     void initialize();
 
@@ -64,6 +66,8 @@ class DataController : public QObject {
 
     // Метод, который вызовет ProjectController при открытии проекта
     void prepareNodesForRestoration(const QMap<QString, Session::DataNodeState>& restoringNodes);
+    // Запускает восстановление тяжёлых данных для узлов, записанных в проекте.
+    void loadRestoredNodes();
 
     QList<std::shared_ptr<QSpace::Core::Experiment>> getExperiments() const;
 
@@ -94,10 +98,12 @@ class DataController : public QObject {
 
     Core::DataManager* m_dataManager;
 
-    Core::ObjectRegistry* m_objectRegistry;
-    Core::LayerManager*   m_layerManager;
-    Core::ViewManager*    m_viewManager;
-    QMap<QUuid, QUuid>    m_taskToExperiment;
+    Core::ObjectRegistry*     m_objectRegistry;
+    Core::LayerManager*       m_layerManager;
+    Core::ViewManager*        m_viewManager;
+    Core::FileSchemeRegistry* m_fileSchemeRegistry;
+
+    QMap<QUuid, QUuid> m_taskToExperiment;
 
     QMap<QUuid, TaskInfo>                 m_activeTasks;
     QSet<QUuid>                           m_loadingNodes;

@@ -152,11 +152,8 @@ void GLViewport::initializeGL() {
 }
 
 void GLViewport::resizeGL(int w, int h) {
-    // Получаем коэффициент масштабирования (например, 1.25 или 2.0 для Retina/HighDPI)
-    qreal retinaScale = devicePixelRatio();
-
-    // Умножаем логические w и h на этот коэффициент
-    glViewport(0, 0, w * retinaScale, h * retinaScale);
+    Q_UNUSED(w);
+    Q_UNUSED(h);
 }
 
 void GLViewport::fitCameraToLayers() {
@@ -193,7 +190,12 @@ void GLViewport::fitCameraToLayers() {
 
 Visualize::RenderContext GLViewport::buildRenderContext() {
     Visualize::RenderContext ctx;
-    ctx.viewportPx   = size(); // получаем размер окна (для виджета отрисовки непосредственно)
+    // QWidget::size() is expressed in logical pixels, while OpenGL renders to
+    // the device-pixel-sized framebuffer owned by QOpenGLWidget.
+    const qreal devicePixelRatio = devicePixelRatioF();
+    ctx.viewportPx =
+        QSize(std::max(1, qRound(width() * devicePixelRatio)),
+              std::max(1, qRound(height() * devicePixelRatio)));
     ctx.orthographic = m_settings->viewport()->orthographic();
 
     const float aspect = width() > 0 ? float(width()) / float(std::max(1, height()))
@@ -211,7 +213,7 @@ Visualize::RenderContext GLViewport::buildRenderContext() {
                              halfH,
                              m_settings->viewport()->nearClip(),
                              m_settings->viewport()->farClip());
-        ctx.pixelsPerWorldUnit = float(height()) / (2.0f * halfH);
+        ctx.pixelsPerWorldUnit = float(ctx.viewportPx.height()) / (2.0f * halfH);
     } else { // все частицы проецируются на экран
         ctx.projMatrix.perspective(m_settings->viewport()->fovYDegrees(),
                                    aspect,
@@ -219,7 +221,8 @@ Visualize::RenderContext GLViewport::buildRenderContext() {
                                    m_settings->viewport()->farClip());
         const float fovYRad = qDegreesToRadians(m_settings->viewport()->fovYDegrees());
         float       visibleWorldHeightAtDistance = 2.0f * m_distance * std::tan(fovYRad * 0.5f);
-        ctx.pixelsPerWorldUnit = float(height()) / std::max(visibleWorldHeightAtDistance, 0.001f);
+        ctx.pixelsPerWorldUnit =
+            float(ctx.viewportPx.height()) / std::max(visibleWorldHeightAtDistance, 0.001f);
     }
 
     ctx.cameraPos = QVector3D(m_center.x() + m_distance * std::cos(m_pitch) * std::sin(m_yaw),
@@ -265,6 +268,7 @@ void GLViewport::paintGL() {
     Visualize::RenderContext ctx = buildRenderContext();
     m_lastContext                = ctx;
 
+    glViewport(0, 0, ctx.viewportPx.width(), ctx.viewportPx.height());
     glClearColor(float(m_backgroundColor.redF()),
                  float(m_backgroundColor.greenF()),
                  float(m_backgroundColor.blueF()),
@@ -332,9 +336,10 @@ void GLViewport::mouseMoveEvent(QMouseEvent* event) {
         float scale = (m_lastContext.pixelsPerWorldUnit > 0.0f)
                           ? (1.0f / m_lastContext.pixelsPerWorldUnit)
                           : 0.01f;
+        const float devicePixelRatio = float(this->devicePixelRatioF());
 
-
-        m_center += (-right * delta.x() + up * delta.y()) * scale;
+        m_center +=
+            (-right * delta.x() * devicePixelRatio + up * delta.y() * devicePixelRatio) * scale;
 
     } else if (event->modifiers() & Qt::ControlModifier) {
         // --- ВРАЩЕНИЕ (ROLL) ---

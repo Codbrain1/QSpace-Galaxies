@@ -23,6 +23,8 @@
 #include <qspinbox.h>
 #include <quuid.h>
 #include <qvariant.h>
+#include <vtkDataArray.h>
+#include <vtkPointData.h>
 
 namespace QSpace::UI {
 PropertyInspector::PropertyInspector(Core::AppCore* app, QWidget* parent)

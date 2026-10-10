@@ -17,7 +17,7 @@ class SessionManager : public QObject { // Исправлена опечатка
                             QSpace::Core::ViewManager*    viewManager,
                             QObject*                      parent = nullptr);
     // Сохранение и загрузка проекта
-    bool saveProject(const QString& filePath);
+    bool saveProject(const QString& filePath, QSpace::Session::ProjectFormat format);
     bool loadProject(const QString& filePath);
 
     // сохранение и загрузка палитр

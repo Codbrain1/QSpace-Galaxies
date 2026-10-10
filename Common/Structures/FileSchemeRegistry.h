@@ -1,4 +1,5 @@
 #pragma once
+#include <QUuid>
 #include "FileSchemeStructures.h"
 
 namespace QSpace::IO {

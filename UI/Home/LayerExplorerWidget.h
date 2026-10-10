@@ -141,8 +141,8 @@ class LayerExplorerWidget : public QWidget {
     Models::DataTreeModel*   m_treeModel = nullptr;
 
     // по умолчанию равен корню диска
-    QString                       m_root_path;
-    Core::ModelingProgrammVersion m_currentVersion = Core::ModelingProgrammVersion::V2;
+    QString                     m_root_path;
+    IO::ModelingProgrammVersion m_currentVersion = IO::ModelingProgrammVersion::V2;
 
     void setCheckStateRecursiveInternal(const QModelIndex& parentIndex, Qt::CheckState state);
     void setCheckStateUnselectedRecursiveInternal(const QModelIndex&       parentIndex,

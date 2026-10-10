@@ -8,6 +8,8 @@
 #include <QVariantList>
 #include <QVariantMap>
 #include <qcontainerfwd.h>
+#include <qdebug.h>
+#include <qlogging.h>
 #include <qmetaobject.h>
 #include <qobject.h>
 #include <qobjectdefs.h>
@@ -94,6 +96,7 @@ template <typename T> T variantMapToGadget(const QVariantMap& map) {
         QMetaProperty prop = mo.property(i);
         if (!prop.isWritable())
             continue;
+        qDebug() << prop.name();
         auto it = map.find(QString::fromLatin1(prop.name()));
         if (it == map.end())
             continue;

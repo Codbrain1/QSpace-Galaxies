@@ -14,6 +14,8 @@ class ReflectionTest : public QObject {
     // Тесты базовых шаблонов
     void testSimpleGadgetSerialization();
     void testComplexGadgetSerialization();
+    void testComplexGadgetDeserialization();
+    void testCollectionGadgetRoundTrip();
 
     // Data-driven тесты
     void testDataDrivenGadgets_data();
@@ -28,8 +30,12 @@ void ReflectionTest::initTestCase() {
     // и мог создавать экземпляры по имени типа при десериализации
     qRegisterMetaType<TestTypes::SimpleGadget>("TestTypes::SimpleGadget");
     qRegisterMetaType<TestTypes::ComplexGadget>("TestTypes::ComplexGadget");
+    qRegisterMetaType<TestTypes::CollectionGadget>("TestTypes::CollectionGadget");
     qRegisterMetaType<TestTypes::Status>("TestTypes::Status");
     qRegisterMetaType<QList<TestTypes::SimpleGadget>>("QList<TestTypes::SimpleGadget>");
+    qRegisterMetaType<QMap<QString, TestTypes::SimpleGadget>>(
+        "QMap<QString, TestTypes::SimpleGadget>");
+    qRegisterMetaType<QMap<QString, int>>("QMap<QString, int>");
 
     // Регистрация типов схемы для работы variantToReadScheme
     qRegisterMetaType<QSpace::IO::ColumnMapping>("QSpace::IO::ColumnMapping");
@@ -89,6 +95,62 @@ void ReflectionTest::testComplexGadgetSerialization() {
         QCOMPARE(gadgetMap.value("id").toInt(), simpleList.at(i).id());
         QCOMPARE(gadgetMap.value("name").toString(), simpleList.at(i).name());
     }
+}
+
+void ReflectionTest::testComplexGadgetDeserialization() {
+    TestTypes::SimpleGadget nested;
+    nested.setId(100);
+    nested.setName("InnerData");
+
+    TestTypes::ComplexGadget original;
+    original.setStatus(TestTypes::Status::Active);
+    original.setNested(nested);
+    original.setNumbers({1, 2, 3, 5, 8});
+
+    QList<TestTypes::SimpleGadget> simpleGadgets;
+    for (int i = 0; i < 3; ++i) {
+        TestTypes::SimpleGadget item;
+        item.setId(i + 10);
+        item.setName(QString("Gadget_%1").arg(i));
+        simpleGadgets.append(item);
+    }
+    original.setSimpleGadgets(simpleGadgets);
+
+    const QVariantMap serialized = QSpace::Reflection::gadgetToVariantMap(original);
+    const TestTypes::ComplexGadget restored =
+        QSpace::Reflection::variantMapToGadget<TestTypes::ComplexGadget>(serialized);
+
+    QCOMPARE(restored.status(), original.status());
+    QCOMPARE(restored.nested(), original.nested());
+    QCOMPARE(restored.numbers(), original.numbers());
+    QCOMPARE(restored.simpleGadgets(), original.simpleGadgets());
+}
+
+void ReflectionTest::testCollectionGadgetRoundTrip() {
+    TestTypes::SimpleGadget first;
+    first.setId(1);
+    first.setName("first");
+
+    TestTypes::SimpleGadget second;
+    second.setId(2);
+    second.setName("second");
+
+    TestTypes::CollectionGadget original;
+    original.setItems({first, second});
+    original.setItemsByName({{"alpha", first}, {"beta", second}});
+    original.setCounters({{"processed", 2}, {"skipped", 1}});
+
+    const QVariantMap serialized = QSpace::Reflection::gadgetToVariantMap(original);
+    QVERIFY(serialized.value("items").canConvert<QVariantList>());
+    QVERIFY(serialized.value("itemsByName").canConvert<QVariantMap>());
+    QVERIFY(serialized.value("counters").canConvert<QVariantMap>());
+
+    const TestTypes::CollectionGadget restored =
+        QSpace::Reflection::variantMapToGadget<TestTypes::CollectionGadget>(serialized);
+
+    QCOMPARE(restored.items(), original.items());
+    QCOMPARE(restored.itemsByName(), original.itemsByName());
+    QCOMPARE(restored.counters(), original.counters());
 }
 
 // 3. Data-driven тест с наборами данных (полный цикл сериализации -> десериализации)

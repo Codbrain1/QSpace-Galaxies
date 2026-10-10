@@ -144,6 +144,16 @@ void LayerManager::removeAllLayersForNode(const QUuid& nodeId) {
     }
 }
 
+void LayerManager::clear() {
+    const auto layerIds = m_layers.keys();
+    for (const auto& layerId : layerIds)
+        removeLayer(layerId);
+
+    m_layers.clear();
+    m_nodeToLayers.clear();
+    m_viewToLayers.clear();
+}
+
 void LayerManager::removeAllLayersForView(Visualize::Views::AbstractView* view) {
     if (!m_viewToLayers.contains(view))
         return;
@@ -175,11 +185,18 @@ QList<std::shared_ptr<Visualize::Layers::Layer>> LayerManager::getLayersForNode(
 }
 
 void LayerManager::updateNodeMasterSettings(const QUuid& nodeId) {
-    // auto layers = getLayersForNode(nodeId);
-    // for (auto& layer : layers) {
-    //     if (layer->IsSyncedWithMaster()) {
+    // const auto layers = getLayersForNode(nodeId);
+    // const auto node =
+    //     (!layers.isEmpty() && layers.front()) ? layers.front()->dataNode() : nullptr;
+
+    // for (const auto& layer : layers) {
+    //     if (!layer || !layer->IsSyncedWithMaster())
+    //         continue;
+
+    //     if (node)
+    //         layer->setData(node);
+    //     else
     //         layer->update();
-    //     }
     // }
 }
 

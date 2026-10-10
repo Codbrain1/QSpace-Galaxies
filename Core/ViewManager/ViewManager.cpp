@@ -84,13 +84,32 @@ QUuid ViewManager::getMainViewId() const {
 }
 
 void ViewManager::removeView(const QUuid& id) {
-    if (m_views.contains(id)) {
-        m_views.erase(id);
-        if (m_mainViewId == id && !m_views.empty()) {
-            m_mainViewId = m_views.begin()->first;
-        }
-        emit viewRemoved(id, m_views[id]->viewType());
-    }
+    const auto it = m_views.find(id);
+    if (it == m_views.end())
+        return;
+
+    const auto type = it->second ? it->second->viewType()
+                                 : Visualize::Views::ViewType::OpenGL3D;
+    m_views.erase(it);
+
+    if (m_mainViewId == id)
+        m_mainViewId = m_views.empty() ? QUuid() : m_views.begin()->first;
+
+    emit viewRemoved(id, type);
+}
+
+void ViewManager::clear() {
+    const auto ids = [&]() {
+        QList<QUuid> result;
+        for (const auto& [id, view] : m_views)
+            result.append(id);
+        return result;
+    }();
+
+    for (const auto& id : ids)
+        removeView(id);
+
+    m_mainViewId = QUuid();
 }
 
 void ViewManager::updateAllViews() {

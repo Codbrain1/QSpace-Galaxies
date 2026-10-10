@@ -1,8 +1,20 @@
 #include "ProjectFormatFactory.h"
 
+#include "JsonProjectFormatCodec.h"
 #include <QFileInfo>
 
 namespace QSpace::Session {
+
+ProjectFormatCodecPtr ProjectFormatFactory::create(ProjectFormat format) {
+    switch (format) {
+    case ProjectFormat::Json:
+        return std::make_unique<JsonProjectFormatCodec>();
+    case ProjectFormat::Xml:
+        return nullptr;
+    }
+
+    return nullptr;
+}
 
 std::optional<ProjectFormat> ProjectFormatFactory::fromFilePath(const QString& filePath) {
     const QString suffix = QFileInfo(filePath).suffix().toLower();

@@ -6,6 +6,8 @@ target_sources(ColorMapManager PRIVATE
     ColorMapManager.cpp
     ColorMapTexture.h
     ColorMapTexture.cpp
+    ColorMapManagerSerializer.h
+    ColorMapManagerSerializer.cpp
 )
 target_include_directories(ColorMapManager PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../..)
 target_link_libraries(ColorMapManager PUBLIC

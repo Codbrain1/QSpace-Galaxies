@@ -24,6 +24,7 @@ class VIEWMANAGER_EXPORT ViewManager : public QObject {
     std::shared_ptr<Visualize::Views::AbstractView> getView(const QUuid& viewId);
     QUuid                                           getMainViewId() const;
     void                                            removeView(const QUuid& id);
+    void                                            clear();
 
     // аргумент принимает указатель на Views::AbstractView
     template <typename Function> void forEachView(Function&& action) {

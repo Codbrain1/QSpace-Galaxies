@@ -1,5 +1,7 @@
 #pragma once
+#include <QObject>
 #include <qtmetamacros.h>
+
 namespace QSpace::Core
 {
 Q_NAMESPACE

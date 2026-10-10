@@ -30,6 +30,7 @@ bool ViewManagerSerializer::fromDTO(const Session::ViewManagerDTO& dto, Core::Vi
         return false;
     }
 
+    viewManager->clear();
     bool allOk = true;
 
     for (const auto& viewDto : dto.views) {

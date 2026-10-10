@@ -1,6 +1,7 @@
 
 #pragma once
 #include <QList>
+#include <QMap>
 #include <QObject>
 #include <QString>
 #include <qtmetamacros.h>
@@ -98,8 +99,52 @@ struct ComplexGadget {
     QList<SimpleGadget> m_simplegadgets;
 };
 
+// Гаджет с последовательной и ассоциативной коллекциями.
+struct CollectionGadget {
+    Q_GADGET
+    Q_PROPERTY(QList<SimpleGadget> items READ items WRITE setItems)
+    Q_PROPERTY(QMap<QString, SimpleGadget> itemsByName READ itemsByName WRITE setItemsByName)
+    Q_PROPERTY(QMap<QString, int> counters READ counters WRITE setCounters)
+
+  public:
+    QList<SimpleGadget> items() const {
+        return m_items;
+    }
+
+    void setItems(const QList<SimpleGadget>& items) {
+        m_items = items;
+    }
+
+    QMap<QString, SimpleGadget> itemsByName() const {
+        return m_itemsByName;
+    }
+
+    void setItemsByName(const QMap<QString, SimpleGadget>& itemsByName) {
+        m_itemsByName = itemsByName;
+    }
+
+    QMap<QString, int> counters() const {
+        return m_counters;
+    }
+
+    void setCounters(const QMap<QString, int>& counters) {
+        m_counters = counters;
+    }
+
+  private:
+    QList<SimpleGadget>        m_items;
+    QMap<QString, SimpleGadget> m_itemsByName;
+    QMap<QString, int>          m_counters;
+};
+
 } // namespace TestTypes
 
 // Регистрируем гаджеты в Meta-object системе Qt
 Q_DECLARE_METATYPE(TestTypes::SimpleGadget)
 Q_DECLARE_METATYPE(TestTypes::ComplexGadget)
+Q_DECLARE_METATYPE(TestTypes::CollectionGadget)
+Q_DECLARE_METATYPE(QList<TestTypes::SimpleGadget>)
+using SimpleGadgetMap = QMap<QString, TestTypes::SimpleGadget>;
+using IntMap          = QMap<QString, int>;
+Q_DECLARE_METATYPE(SimpleGadgetMap)
+Q_DECLARE_METATYPE(IntMap)

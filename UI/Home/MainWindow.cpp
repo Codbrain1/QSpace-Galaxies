@@ -5,6 +5,7 @@
 #include "Core/AppCore/ProjectController.h"
 #include "Core/AppCore/VideoController.h"
 #include "Core/AppCore/ViewController.h"
+#include "Core/ViewManager/ViewManager.h"
 #include "Enums/ViewEnums.h"
 #include "Enums/VisualizeBaseEnums.h"
 #include "LayerExplorerWidget.h"

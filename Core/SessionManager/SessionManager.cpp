@@ -5,13 +5,72 @@
 #include "Core/ViewManager/ViewManager.h"
 #include "Core/ViewManager/ViewManagerSerializer.h"
 #include "Visualize/ColorMapManager/ColorMapManagerSerializer.h"
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonParseError>
 #include <qfileinfo.h>
-#include <qjsonobject.h>
+#include <qloggingcategory.h>
 #include <qstringview.h>
-#include "Session/ProjectSerializer.h"
+#include "Logger/Logger.h"
+#include "Session/ProjectFormatFactory.h"
 #include "Session/Reflection.h"
 
 namespace QSpace::Core {
+namespace {
+QJsonObject colorMapToJson(const QSpace::Visualize::ColorMap& map) {
+    QJsonObject mapJson;
+    mapJson.insert(QStringLiteral("id"), map.id.toString());
+    mapJson.insert(QStringLiteral("name"), map.name);
+    mapJson.insert(QStringLiteral("filePath"), map.filePath);
+    mapJson.insert(QStringLiteral("isPreset"), map.isPreset);
+
+    QJsonArray pointsJson;
+    for (const auto& point : map.points) {
+        QJsonObject pointJson;
+        pointJson.insert(QStringLiteral("x"), point.x);
+        pointJson.insert(QStringLiteral("r"), point.r);
+        pointJson.insert(QStringLiteral("g"), point.g);
+        pointJson.insert(QStringLiteral("b"), point.b);
+        pointsJson.append(pointJson);
+    }
+    mapJson.insert(QStringLiteral("points"), pointsJson);
+    return mapJson;
+}
+
+std::optional<QSpace::Visualize::ColorMap> colorMapFromJson(const QJsonObject& json) {
+    if (!json.contains(QStringLiteral("id")) || !json.contains(QStringLiteral("name")) ||
+        !json.contains(QStringLiteral("points"))) {
+        return std::nullopt;
+    }
+
+    QSpace::Visualize::ColorMap map;
+    map.id       = QUuid::fromString(json.value(QStringLiteral("id")).toString());
+    map.name     = json.value(QStringLiteral("name")).toString();
+    map.filePath = json.value(QStringLiteral("filePath")).toString();
+    map.isPreset = json.value(QStringLiteral("isPreset")).toBool(false);
+
+    const QJsonArray pointsJson = json.value(QStringLiteral("points")).toArray();
+    map.points.reserve(pointsJson.size());
+    for (const auto& pointValue : pointsJson) {
+        if (!pointValue.isObject()) {
+            return std::nullopt;
+        }
+        const QJsonObject             pointJson = pointValue.toObject();
+        QSpace::Visualize::ColorPoint point;
+        point.x = pointJson.value(QStringLiteral("x")).toDouble();
+        point.r = pointJson.value(QStringLiteral("r")).toDouble();
+        point.g = pointJson.value(QStringLiteral("g")).toDouble();
+        point.b = pointJson.value(QStringLiteral("b")).toDouble();
+        map.points.append(point);
+    }
+
+    if (map.id.isNull() || map.name.isEmpty()) {
+        return std::nullopt;
+    }
+    return map;
+}
+} // namespace
 
 SessionManager::SessionManager(QSpace::Core::ObjectRegistry* registry,
                                QSpace::Core::LayerManager*   layerManager,
@@ -29,43 +88,101 @@ SessionManager::SessionManager(QSpace::Core::ObjectRegistry* registry,
 // savePallete() -- сохраняет палитру
 // loadPallete() -- загружает палитру
 // ===================================================
+// TODO: переписать на Reflection
 bool SessionManager::savePalette(const Visualize::ColorMap& map, const QString& filePath) {
-    auto jsonFile = QSpace::Session::ProjectSerializer::serializeColorMap(
-        map); // TODO преренести реализацию метода в ColorMapSerializer
-    QByteArray data = QJsonDocument(jsonFile).toJson(QJsonDocument::Indented);
+    if (filePath.isEmpty()) {
+        emit errorOccurred("Palette file path is empty");
+        return false;
+    }
+
+    const QJsonObject json = colorMapToJson(map);
+    const QByteArray  data = QJsonDocument(json).toJson(QJsonDocument::Indented);
     return m_storage_session->save(filePath, data);
 }
 
+// TODO переписать на Reflection
 std::optional<Visualize::ColorMap> SessionManager::loadPalette(const QString& filePath) {
-    auto        data = m_storage_session->load(filePath);
-    QJsonObject jsonObj;
-    if (data.has_value()) {
-        jsonObj       = QJsonDocument::fromJson(data.value()).object();
-        auto colorMap = QSpace::Session::ProjectSerializer::deserializeColorMap(jsonObj);
-        return colorMap;
+    if (filePath.isEmpty()) {
+        emit errorOccurred("Palette file path is empty");
+        return std::nullopt;
     }
-    return std::nullopt;
+
+    const auto data = m_storage_session->load(filePath);
+    if (!data.has_value()) {
+        emit errorOccurred("Failed to load palette file");
+        return std::nullopt;
+    }
+
+    QJsonParseError parseError;
+    const auto      doc = QJsonDocument::fromJson(*data, &parseError);
+    if (parseError.error != QJsonParseError::NoError || !doc.isObject()) {
+        emit errorOccurred("Failed to parse palette file");
+        return std::nullopt;
+    }
+
+    auto colorMap = colorMapFromJson(doc.object());
+    if (!colorMap.has_value()) {
+        emit errorOccurred("Palette file has invalid schema");
+    }
+    return colorMap;
 }
 
 // ===================================================
 // saveProject() -- создает DTO и сохраняет проект
 // loadProject() -- загружает DTO и восстанавливает состояние приложения
 // ===================================================
-bool SessionManager::saveProject(const QString& filePath) {
-    const QSpace::Session::ProjectDTO dto            = createProjectDTO();
-    const auto                        projVariantMap = QSpace::Reflection::gadgetToVariantMap(dto);
-    return m_storage_session->save(filePath, data);
+bool SessionManager::saveProject(const QString& filePath, QSpace::Session::ProjectFormat format) {
+    if (filePath.isEmpty()) {
+        emit errorOccurred("Project file path is empty");
+        return false;
+    }
+
+    const QSpace::Session::ProjectDTO dto     = createProjectDTO();
+    const auto                        dataMap = QSpace::Reflection::gadgetToVariantMap(dto);
+    const auto                        codec = QSpace::Session::ProjectFormatFactory::create(format);
+    if (!codec) {
+        emit errorOccurred("Unsupported project format");
+        return false;
+    }
+    return m_storage_session->save(filePath, codec->encode(dataMap));
 }
 
 bool SessionManager::loadProject(const QString& filePath) {
-    const auto data = m_storage_session->load(filePath);
-    if (!data.has_value())
+    if (filePath.isEmpty()) {
+        emit errorOccurred("Project file path is empty");
         return false;
-    auto dto = Session::ProjectSerializer::deserialize(*data);
-    if (!dto.has_value())
-        return false;
+    }
 
-    return fromProjectDTO(dto.value());
+    const auto format = QSpace::Session::ProjectFormatFactory::fromFilePath(".json");
+    if (!format.has_value()) {
+        emit errorOccurred("Unsupported project format");
+        return false;
+    }
+
+    const auto codec = QSpace::Session::ProjectFormatFactory::create(*format);
+    if (!codec) {
+        emit errorOccurred("Unsupported project format");
+        return false;
+    }
+
+    const auto data = m_storage_session->load(filePath);
+    if (!data.has_value()) {
+        emit errorOccurred("Failed to load project file");
+        return false;
+    }
+
+    const auto map = codec->decode(*data);
+    if (!map.has_value()) {
+        emit errorOccurred("Failed to decode project file");
+        return false;
+    }
+    const auto dto = QSpace::Reflection::variantMapToGadget<QSpace::Session::ProjectDTO>(*map);
+    if (!fromProjectDTO(dto)) {
+        emit errorOccurred("Failed to restore project from DTO");
+        return false;
+    }
+
+    return true;
 }
 
 QSpace::Session::ProjectDTO SessionManager::createProjectDTO() const {
@@ -80,6 +197,10 @@ QSpace::Session::ProjectDTO SessionManager::createProjectDTO() const {
 }
 
 bool SessionManager::fromProjectDTO(const QSpace::Session::ProjectDTO& dto) {
+    // Сначала удаляем старые слои: они владеют ссылками на старые view и
+    // должны отсоединиться от OpenGL/Qt до уничтожения представлений.
+    m_layerManager->clear();
+
     bool is_succses = ObjectRegistrySerializer::fromDTO(dto.objregDTO, m_registry);
     is_succses      = is_succses && ViewManagerSerializer::fromDTO(dto.viewmanDTO, m_viewManager);
     QSpace::Visualize::ColorMapManagerSerializer::fromDTO(dto.colormapmanDTO);

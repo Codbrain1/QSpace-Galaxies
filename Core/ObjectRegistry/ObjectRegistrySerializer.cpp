@@ -4,6 +4,7 @@
 #include "Common/Structures/SessionStructures.h"
 #include "Core/ObjectRegistry/ObjectRegistry.h"
 #include <qloggingcategory.h>
+#include <QSet>
 #include "Structures/ObjectRegistryStructures.h"
 #include <memory>
 #include <optional>
@@ -43,15 +44,17 @@ bool ObjectRegistrySerializer::fromDTO(const Session::ObjectRegistryDTO& dto, Co
 
     QMap<QUuid, std::shared_ptr<Core::DataNode>> nodesMap;
     QMap<QUuid, std::shared_ptr<Core::Snapshot>> snapshotsMap;
-    // Восстанавливаем DataNode
+    // Сначала создаём объекты в памяти, но регистрируем их после восстановления
+    // связей. Иначе registerNode() испускает nodeAdded без родительского snapshot,
+    // а последующий registerNodeToSnapshot() пропускает уже существующую ноду.
     for (const auto& nodeDto : dto.nodes) {
         auto node = fromDTO(nodeDto);
         if (node) {
             nodesMap.insert(node->id, node);
-            registry->registerNode(node);
         }
     }
-    // Восстанавливаем Snapshot и связываем их с DataNode
+
+    // Восстанавливаем Snapshot и связываем их с DataNode.
     for (const auto& snapshotDto : dto.snapshots) {
         auto snapshot = fromDTO(snapshotDto);
         if (snapshot) {
@@ -64,10 +67,13 @@ bool ObjectRegistrySerializer::fromDTO(const Session::ObjectRegistryDTO& dto, Co
                 }
             }
             snapshotsMap.insert(snapshot->id, snapshot);
-            registry->registerSnapshot(snapshot);
         }
     }
-    // Восстанавливаем Experiment и связываем их со Snapshot
+
+    // Сначала регистрируем эксперименты: ObjectRegistry зарегистрирует их
+    // snapshots и nodes уже с правильными родительскими идентификаторами.
+    QSet<QUuid> registeredSnapshotIds;
+    QSet<QUuid> registeredNodeIds;
     for (const auto& experimentDto : dto.experiments) {
         auto experiment = fromDTO(experimentDto);
         if (experiment) {
@@ -81,8 +87,28 @@ bool ObjectRegistrySerializer::fromDTO(const Session::ObjectRegistryDTO& dto, Co
                 }
             }
             registry->registerExperiment(experiment);
+            for (const auto& snapshot : experiment->snapshots) {
+                if (!snapshot)
+                    continue;
+                registeredSnapshotIds.insert(snapshot->id);
+                for (const auto& node : snapshot->components) {
+                    if (node)
+                        registeredNodeIds.insert(node->id);
+                }
+            }
         }
     }
+
+    // Сохраняем поддержку проектов с snapshot/node, не входящими в эксперимент.
+    for (const auto& snapshot : snapshotsMap) {
+        if (!registeredSnapshotIds.contains(snapshot->id))
+            registry->registerSnapshot(snapshot);
+    }
+    for (const auto& node : nodesMap) {
+        if (!registeredNodeIds.contains(node->id))
+            registry->registerNode(node);
+    }
+
     return true;
 }
 

@@ -17,20 +17,23 @@
 #include <qloggingcategory.h>
 #include <qobjectdefs.h>
 #include "IO/ReaderFactory.h"
+#include "Structures/FileSchemeStructures.h"
 #include <optional>
 
 namespace QSpace::Core::Controllers {
 
-DataController::DataController(Core::DataManager*    dataManager,
-                               Core::ObjectRegistry* objectRegistry,
-                               Core::LayerManager*   layerManager,
-                               Core::ViewManager*    viewManager,
-                               QObject*              parent)
+DataController::DataController(Core::DataManager*        dataManager,
+                               Core::ObjectRegistry*     objectRegistry,
+                               Core::LayerManager*       layerManager,
+                               Core::ViewManager*        viewManager,
+                               Core::FileSchemeRegistry* fileSchemeRegistry,
+                               QObject*                  parent)
     : QObject(parent),
       m_dataManager(dataManager),
       m_objectRegistry(objectRegistry),
       m_layerManager(layerManager),
-      m_viewManager(viewManager) {
+      m_viewManager(viewManager),
+      m_fileSchemeRegistry(fileSchemeRegistry) {
 }
 
 void DataController::initialize() {
@@ -82,13 +85,19 @@ void DataController::importFiles(const QStringList&          paths,
         // Одиночный импорт файла
         IO::FileFormat        format     = IO::Utils::getFormat(paths[0]);
         Visualize::EntityType entityType = IO::Utils::getEntityType(QFileInfo(paths[0]).fileName());
-        IO::ReadScheme        scheme;
-        // if (version == IO::ModelingProgrammVersion::V2_3) {
-        //     scheme = IO::SchemeFactory::createScheme_v2_3(entityType, format);
-        // } else {
-        //     scheme = IO::SchemeFactory::createScheme_v2(entityType, format);
-        // }
-        QUuid taskId                     = m_dataManager->importDataAsync(paths[0], scheme);
+        IO::PresetKey         key;
+        key.format    = format;
+        key.type      = entityType;
+        key.mpv       = version;
+        const auto id = m_fileSchemeRegistry->findPresetId(key);
+        if (!id.has_value())
+            return;
+
+        const auto scheme = m_fileSchemeRegistry->getReadScheme(id.value());
+        if (!scheme.has_value())
+            return;
+
+        QUuid taskId                     = m_dataManager->importDataAsync(paths[0], scheme.value());
         m_activeTasks[taskId].totalFiles = 1;
         if (!experimentId.isNull()) {
             m_taskToExperiment.insert(taskId, experimentId);
@@ -99,16 +108,21 @@ void DataController::importFiles(const QStringList&          paths,
         for (const auto& path : paths) {
             IO::FileFormat        format     = IO::Utils::getFormat(QFileInfo(path).fileName());
             Visualize::EntityType entityType = IO::Utils::getEntityType(QFileInfo(path).fileName());
-            IO::ReadScheme        scheme;
-            // if (version == Core::ModelingProgrammVersion::V2_3) {
-            //     scheme = IO::SchemeFactory::createScheme_v2_3(entityType, format);
-            // } else {
-            //     scheme = IO::SchemeFactory::createScheme_v2(entityType, format);
-            // }
+            IO::PresetKey         key;
+            key.format    = format;
+            key.type      = entityType;
+            key.mpv       = version;
+            const auto id = m_fileSchemeRegistry->findPresetId(key);
+            if (!id.has_value())
+                continue;
+
+            const auto scheme = m_fileSchemeRegistry->getReadScheme(id.value());
+            if (!scheme.has_value())
+                continue;
 
             IO::BatchTask task;
             task.path   = path;
-            task.scheme = scheme;
+            task.scheme = scheme.value();
             tasks.append(task);
         }
         QUuid batchTaskId                     = m_dataManager->importBatchDataAsync(tasks);
@@ -260,6 +274,23 @@ void DataController::prepareNodesForRestoration(
     m_restoringNodes = restoringNodes;
 }
 
+void DataController::loadRestoredNodes() {
+    if (!m_objectRegistry)
+        return;
+
+    for (const auto& node : m_objectRegistry->getAllNodes()) {
+        if (!node || node->path.isEmpty())
+            continue;
+
+        if (!QFileInfo::exists(node->path)) {
+            qCWarning(LogCore) << "Restored data file does not exist:" << node->path;
+            continue;
+        }
+
+        onRequestDataLoad(node->id);
+    }
+}
+
 // ---------------------------------------------------------
 // @SECTION: Реакция на UI (Слайдер и Дерево)
 // ---------------------------------------------------------
@@ -405,13 +436,42 @@ void DataController::onRequestDataLoad(const QUuid& nodeId) {
 
     m_loadingNodes.insert(nodeId);
 
-    // QUuid taskId =
-    //     m_dataManager->importDataAsync(node->path, node->scheme, IO::ImportRole::FullData);
+    std::optional<IO::ReadScheme> scheme;
+    if (!node->scheme.isNull()) {
+        scheme = m_fileSchemeRegistry->getReadScheme(node->scheme);
+    }
 
-    // Сразу регистрируем задачу и привязываем к ней ноду
-    // m_activeTasks[taskId] = TaskInfo{nodeId, 1};
+    // Старые проекты могли не сохранить идентификатор схемы. Для них
+    // восстанавливаем стандартную схему V2 по формату и типу файла.
+    if (!scheme.has_value()) {
+        IO::PresetKey key;
+        key.format = node->format;
+        key.type   = node->type;
+        key.mpv    = IO::ModelingProgrammVersion::V2;
 
-    qCInfo(LogCore) << "Lazy loading started for:" << node->label;
+        const auto schemeId = m_fileSchemeRegistry->findPresetId(key);
+        if (schemeId.has_value()) {
+            node->scheme = schemeId.value();
+            scheme = m_fileSchemeRegistry->getReadScheme(schemeId.value());
+        }
+    }
+
+    if (!scheme.has_value()) {
+        m_loadingNodes.remove(nodeId);
+        qCWarning(LogCore) << "No read scheme found for restored node:" << node->path;
+        return;
+    }
+
+    const QUuid taskId =
+        m_dataManager->importDataAsync(node->path, scheme.value(), IO::ImportRole::ProjectData);
+    if (taskId.isNull()) {
+        m_loadingNodes.remove(nodeId);
+        qCWarning(LogCore) << "Failed to start loading restored node:" << node->path;
+        return;
+    }
+
+    m_activeTasks[taskId] = TaskInfo{nodeId, 1};
+    qCInfo(LogCore) << "Data loading started for:" << node->label;
 }
 
 QString DataController::extractGroupName(const QString& filename) {

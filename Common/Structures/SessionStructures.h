@@ -13,18 +13,16 @@
 #include <qtmetamacros.h>
 #include <quuid.h>
 #include <qvariant.h>
+#include "ColormapPresets.h"
 #include "DataNodeMetaData.h"
 #include "FileSchemeRegistry.h"
-#include "Structures/ColormapPresets.h"
 #include <float.h>
+
 
 namespace QSpace::Session {
 Q_NAMESPACE
 
-enum class ProjectFormat {
-    Json,
-    Xml
-};
+enum class ProjectFormat { Json, Xml };
 Q_ENUM_NS(ProjectFormat)
 
 class ExperimentDTO {
@@ -84,6 +82,7 @@ class ObjectRegistryDTO {
     QList<ExperimentDTO> experiments;
     QList<SnapshotDTO>   snapshots;
     QList<DataNodeDTO>   nodes;
+    bool                 operator==(const ObjectRegistryDTO&) const = default;
 };
 
 class ViewDTO {
@@ -108,6 +107,7 @@ class ViewManagerDTO {
   public:
     QUuid          mainViewId;
     QList<ViewDTO> views;
+    bool           operator==(const ViewManagerDTO&) const = default;
 };
 
 class LayerDTO {
@@ -135,6 +135,7 @@ class LayerManagerDTO {
     Q_PROPERTY(QList<LayerDTO> layers MEMBER layers)
   public:
     QList<LayerDTO> layers;
+    bool            operator==(const LayerManagerDTO&) const = default;
 };
 
 class FileSchemeRegistryDTO {
@@ -151,6 +152,7 @@ class ColorMapManagerDTO {
     Q_PROPERTY(QList<QSpace::Visualize::ColorMap> colorMaps MEMBER colorMaps)
   public:
     QList<Visualize::ColorMap> colorMaps;
+    bool                       operator==(const ColorMapManagerDTO&) const = default;
 };
 
 class ProjectDTO {

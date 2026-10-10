@@ -38,7 +38,7 @@
      <x>0</x>
      <y>0</y>
      <width>1280</width>
-     <height>25</height>
+     <height>33</height>
     </rect>
    </property>
    <widget class="QMenu" name="menu_file">
@@ -122,7 +122,7 @@
   </widget>
   <action name="action_open_session">
    <property name="enabled">
-    <bool>false</bool>
+    <bool>true</bool>
    </property>
    <property name="text">
     <string>Открыть проект</string>
@@ -130,7 +130,7 @@
   </action>
   <action name="action_save_session">
    <property name="enabled">
-    <bool>false</bool>
+    <bool>true</bool>
    </property>
    <property name="text">
     <string>Сохранить</string>

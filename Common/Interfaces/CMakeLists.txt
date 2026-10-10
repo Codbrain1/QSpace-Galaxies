@@ -3,6 +3,7 @@ target_sources(Interfaces PRIVATE
             IReader.h
             IWriter.h
             IRenderLayer.h
+            IProjectFormatCodec.h
 )
 set_target_properties(Interfaces PROPERTIES AUTOMOC ON)
 target_include_directories(Interfaces PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/..

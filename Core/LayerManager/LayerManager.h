@@ -25,6 +25,7 @@ class LAYERMANAGER_EXPORT LayerManager : public QObject {
 
     void removeLayer(const QUuid& layerId);
     void removeAllLayersForNode(const QUuid& nodeId);
+    void clear();
 
     // Метод для очистки всех слоев конкретного окна (вызывается при закрытии окна)
     void removeAllLayersForView(Visualize::Views::AbstractView* view);

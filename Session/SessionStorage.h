@@ -1,6 +1,9 @@
 #pragma once
-#include "ProjectSerializer.h"
+#include <QByteArray>
+#include <QString>
 #include <qstringview.h>
+#include <optional>
+
 namespace QSpace::Session {
 class SessionStorage {
   public:

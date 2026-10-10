@@ -2,6 +2,8 @@
 #include "Common/Structures/FileSchemeStructures.h"
 #include <QMetaAssociation>
 #include <QMetaSequence>
+#include <QSequentialIterable>
+#include <QVariant>
 #include <qassociativeiterable.h>
 #include <qcontainerfwd.h>
 #include <qiterable.h>
@@ -79,6 +81,7 @@ QVariant serializeValue(const QVariant& value, const QMetaProperty& prop) {
             QVariant keyValue = serializeValue(it.key());
             res.insert(keyValue.toString(), serializeValue(it.value()));
         }
+        return res;
     }
 
     // последовательный контейнер
@@ -114,11 +117,14 @@ QVariantMap serializeGadget(const QVariant& gadgetValue) {
 }
 
 // Метод не обрабатывает вложенные указатели в QObject и Gadget, а также не выделяет память,
+// Метод не обрабатывает вложенные указатели в QObject и Gadget, а также не выделяет память,
 QVariant deserializeValue(int targetTypeId, const QVariant& flatValue, const QMetaProperty& prop) {
     QMetaType targetType(targetTypeId);
 
-    if (!flatValue.isValid() || flatValue.isNull())
+    if (!flatValue.isValid() || flatValue.isNull()) {
+        qDebug() << prop.name() << ": is invalid or null";
         return QVariant(targetType);
+    }
 
     const bool isEnumViaProp = prop.isValid() && prop.isEnumType();
     const bool isEnumViaType = targetType.flags().testFlag(QMetaType::IsEnumeration);
@@ -131,8 +137,7 @@ QVariant deserializeValue(int targetTypeId, const QVariant& flatValue, const QMe
         QMetaEnum metaEnum =
             isEnumViaProp ? prop.enumerator() : details::enumeratorForMetaType(targetType);
         int intValue = 0;
-        if (metaEnum.isValid() &&
-            flatValue.typeId() == QMetaType::QString) { // ИСПРАВЛЕНО: typeId() для Qt6
+        if (metaEnum.isValid() && flatValue.typeId() == QMetaType::QString) {
             bool ok  = false;
             intValue = metaEnum.keyToValue(flatValue.toString().toLatin1().constData(), &ok);
             if (!ok)
@@ -147,14 +152,57 @@ QVariant deserializeValue(int targetTypeId, const QVariant& flatValue, const QMe
     }
 
     // вложенный гаджет
-    if (targetType.metaObject() &&
-        flatValue.typeId() == QMetaType::QVariantMap) { // ИСПРАВЛЕНО: typeId()
+    if (targetType.metaObject() && flatValue.typeId() == QMetaType::QVariantMap) {
         return details::deserializeGadget(targetTypeId, flatValue.toMap());
     }
 
+    // Конструируем пустой экземпляр целевого типа
+    QVariant container(targetType);
+
+    // ассоциативный контейнер Map Hash UnorderedHash
+    if (container.canConvert<QMetaAssociation::Iterable>() && flatValue.canConvert<QVariantMap>()) {
+        QMetaAssociation::Iterable iterable = container.value<QMetaAssociation::Iterable>();
+        const QMetaAssociation&    assoc    = iterable.metaContainer();
+
+        if (assoc.canSetMappedAtKey()) {
+            QVariantMap sourceMap = flatValue.toMap();
+            QMetaType   keyType   = assoc.keyMetaType();
+            QMetaType   valType   = assoc.mappedMetaType();
+            void*       contPtr   = container.data();
+
+            for (auto it = sourceMap.begin(); it != sourceMap.end(); ++it) {
+                QVariant deserializedKey = deserializeValue(keyType.id(), it.key());
+                QVariant deserializedVal = deserializeValue(valType.id(), it.value());
+                assoc.setMappedAtKey(contPtr,
+                                     deserializedKey.constData(),
+                                     deserializedVal.constData());
+            }
+            return container;
+        }
+    }
+
+    // последовательный контейнер
+    if (container.canConvert<QMetaSequence::Iterable>() && flatValue.canConvert<QVariantList>()) {
+        QMetaSequence::Iterable iterable = container.value<QMetaSequence::Iterable>();
+        const QMetaSequence&    seq      = iterable.metaContainer();
+
+        if (seq.canAddValue()) {
+            QVariantList sourceList   = flatValue.toList();
+            QMetaType    itemMetaType = seq.valueMetaType();
+            void*        contPtr      = container.data();
+
+            for (const QVariant& item : sourceList) {
+                QVariant deserializedItem = deserializeValue(itemMetaType.id(), item);
+                seq.addValue(contPtr, deserializedItem.constData());
+            }
+            return container;
+        }
+    }
+
     QVariant result = flatValue;
-    if (result.typeId() != targetTypeId) // ИСПРАВЛЕНО: typeId()
+    if (result.typeId() != targetTypeId && result.canConvert(targetType)) {
         result.convert(targetType);
+    }
     return result;
 }
 
@@ -169,6 +217,7 @@ QVariant deserializeGadget(int targetTypeId, const QVariantMap& map) {
 
     for (int i = 0; i < mo->propertyCount(); ++i) {
         QMetaProperty prop = mo->property(i);
+        qDebug() << prop.name();
         if (!prop.isWritable())
             continue;
         auto it = map.find(QString::fromLatin1(prop.name()));
