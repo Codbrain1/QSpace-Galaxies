@@ -8,7 +8,7 @@
 // ============================================================
 namespace QSpace::Visualize::Layers {
 
-class BinningPointsLayerSettings : public LayerSettings {
+class LAYERS_EXPORT BinningPointsLayerSettings : public LayerSettings {
     Q_OBJECT
     // clang-format off
     Q_PROPERTY(float  lineWidth    READ lineWidth    WRITE setLineWidth    NOTIFY changed)

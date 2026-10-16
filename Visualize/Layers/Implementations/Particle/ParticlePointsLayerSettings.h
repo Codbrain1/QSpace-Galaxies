@@ -6,7 +6,7 @@ namespace QSpace::Visualize::Layers {
 // ============================================================
 // Настройки для ParticleRendererLayer — обычные точки-частицы
 // ============================================================
-class ParticlePointsLayerSettings : public LayerSettings {
+class LAYERS_EXPORT ParticlePointsLayerSettings : public LayerSettings {
     Q_OBJECT
     // clang-format off
     Q_PROPERTY(float pointSizePx                 READ pointSizePx                 WRITE setPointSizePx                 NOTIFY changed)

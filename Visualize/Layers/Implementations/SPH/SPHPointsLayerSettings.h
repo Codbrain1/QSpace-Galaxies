@@ -5,7 +5,7 @@ namespace QSpace::Visualize::Layers {
 // ============================================================
 // Настройки для SPHRendererLayer — splat/resolve пайплайн
 // ============================================================
-class SPHPointsLayerSettings : public LayerSettings {
+class LAYERS_EXPORT SPHPointsLayerSettings : public LayerSettings {
     Q_OBJECT
   public:
     enum class NormalizationMode {

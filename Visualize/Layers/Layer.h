@@ -8,11 +8,13 @@
 #include <QUuid>
 #include <quuid.h>
 #include "LayerSettings.h"
+#include "LayersExport.h"
 #include <memory>
+
 
 namespace QSpace::Visualize::Layers {
 
-class Layer : public QObject {
+class LAYERS_EXPORT Layer : public QObject {
     Q_OBJECT
     Q_PROPERTY(QUuid layerId READ layerId CONSTANT)
     Q_PROPERTY(QUuid dataNodeId READ dataNodeId CONSTANT)

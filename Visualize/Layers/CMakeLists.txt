@@ -17,10 +17,13 @@ Implementations/SPH/SPHRendererLayer.cpp
 Implementations/SPH/SPHPointsLayerSettings.h
 )
 
+include(GenerateExportHeader)
 add_library(Layers SHARED)
-add_library(QSpace::VisualizeLayers ALIAS Layers) 
+add_library(QSpace::VisualizeLayers ALIAS Layers)
+generate_export_header(Layers)
 
 target_sources(Layers PRIVATE
+           LayersExport.h
            Layer.h
            LayerSettings.h
            LayerFactory.h
@@ -30,7 +33,10 @@ target_sources(Layers PRIVATE
             ${ParticleLayer}
             ${SPHLayer}
 )
-target_include_directories(Layers PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../..)
+target_include_directories(Layers PUBLIC
+            ${CMAKE_CURRENT_SOURCE_DIR}/../..
+            ${CMAKE_CURRENT_BINARY_DIR}
+)
 target_link_libraries(Layers PUBLIC
             project_config
             QSpace::VisualizeColorMapManager

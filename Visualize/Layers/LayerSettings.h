@@ -1,5 +1,6 @@
 #pragma once
 #include "Common/Structures/ColormapPresets.h"
+#include "LayersExport.h"
 #include <QColor>
 #include <QMetaProperty>
 #include <QObject>
@@ -9,7 +10,7 @@
 
 namespace QSpace::Visualize::Layers {
 
-class LayerSettings : public QObject {
+class LAYERS_EXPORT LayerSettings : public QObject {
     Q_OBJECT
   public:
     enum class BlendMode { Alpha = 0, Additive = 1 };
