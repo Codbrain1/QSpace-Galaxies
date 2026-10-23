@@ -57,6 +57,9 @@ class VideoController : public QObject {
     // активируем отображаемый снимок
     void handleActivateVisualizeSnapshot(int index);
 
+    // повторно обновляет слой после завершения асинхронной загрузки его данных
+    void handleNodeDataLoaded(const QUuid& nodeId);
+
     // зафиксировать ТЕКУЩИЙ кадр как новый эталон
     void handleFixedEtalonSnapshot(const QUuid& referenceSnapshotId);
 

@@ -28,8 +28,7 @@ void ObjectRegistry::registerNode(std::shared_ptr<DataNode> node) {
     qCInfo(LogCore) << "Registry: Node registered " << node->label << " " << node->id;
 }
 
-void ObjectRegistry::registerNodeToSnapshot(std::shared_ptr<DataNode> node,
-                                            const QUuid&              parentSnapshotId) {
+void ObjectRegistry::registerNodeToSnapshot(std::shared_ptr<DataNode> node, const QUuid& parentSnapshotId) {
     if (!node || m_nodes.contains(node->id))
         return;
 
@@ -44,8 +43,7 @@ void ObjectRegistry::registerNodeToSnapshot(std::shared_ptr<DataNode> node,
     qCInfo(LogCore) << "Registry: Node registered " << node->label;
 }
 
-void ObjectRegistry::registerNodeToExperiment(std::shared_ptr<DataNode> node,
-                                              const QUuid&              experimentId) {
+void ObjectRegistry::registerNodeToExperiment(std::shared_ptr<DataNode> node, const QUuid& experimentId) {
     if (!node)
         return;
 
@@ -98,8 +96,7 @@ void ObjectRegistry::registerSnapshot(std::shared_ptr<Snapshot> snapshot) {
     if (!snapshot)
         return;
     if (m_snapshots.contains(snapshot->id)) {
-        qCWarning(LogCore) << "Registry: Attempt to register duplicate snapshot ID:"
-                           << snapshot->id;
+        qCWarning(LogCore) << "Registry: Attempt to register duplicate snapshot ID:" << snapshot->id;
         return;
     }
     m_snapshots.insert(snapshot->id, snapshot);
@@ -110,8 +107,7 @@ void ObjectRegistry::registerSnapshot(std::shared_ptr<Snapshot> snapshot) {
     qCDebug(LogCore) << "Registry: Snapshot registered " << snapshot->name << " " << snapshot->id;
 }
 
-void ObjectRegistry::registerSnapshot(std::shared_ptr<Snapshot> snapshot,
-                                      const QUuid&              experimentId) {
+void ObjectRegistry::registerSnapshot(std::shared_ptr<Snapshot> snapshot, const QUuid& experimentId) {
     if (!snapshot || m_snapshots.contains(snapshot->id))
         return;
 
@@ -130,8 +126,7 @@ void ObjectRegistry::registerExperiment(std::shared_ptr<Experiment> experiment) 
     if (!experiment)
         return;
     if (m_experiments.contains(experiment->id)) {
-        qCWarning(LogCore) << "Registry: Attempt to register duplicate experiment ID:"
-                           << experiment->id;
+        qCWarning(LogCore) << "Registry: Attempt to register duplicate experiment ID:" << experiment->id;
         return;
     }
     m_experiments.insert(experiment->id, experiment);
@@ -139,8 +134,7 @@ void ObjectRegistry::registerExperiment(std::shared_ptr<Experiment> experiment) 
     for (auto& snap : experiment->snapshots) {
         registerSnapshot(snap, experiment->id);
     }
-    qCDebug(LogCore) << "Registry: Experiment registered " << experiment->name << " "
-                     << experiment->id;
+    qCDebug(LogCore) << "Registry: Experiment registered " << experiment->name << " " << experiment->id;
 }
 
 std::shared_ptr<DataNode> ObjectRegistry::getNode(const QUuid& id) const {
@@ -167,8 +161,7 @@ std::shared_ptr<DataNode> ObjectRegistry::getOrLoadNodeData(const QUuid& id) {
 
     // Если данных в ОЗУ нет — читаем с диска
     qCInfo(LogCore) << "LRU Cache: Lazy loading heavy VTK data for" << node->label;
-    // emit dataLoadRequested(id, node->path, node->scheme);
-    //  CRITICAL: разобраться с подгрузкой данных
+    emit dataLoadRequested(id);
     return node;
 }
 
@@ -248,10 +241,9 @@ void ObjectRegistry::removeObject(const QUuid& id) {
         // Но это работает быстро, потому что вызывается редко и НЕ рекурсивно!
         for (auto& snapshot : m_snapshots) {
             auto& comps = snapshot->components;
-            auto  it    = std::remove_if(
-                comps.begin(),
-                comps.end(),
-                [&id](const std::shared_ptr<DataNode>& n) { return n && n->id == id; });
+            auto  it    = std::remove_if(comps.begin(), comps.end(), [&id](const std::shared_ptr<DataNode>& n) {
+                return n && n->id == id;
+            });
             if (it != comps.end()) {
                 comps.erase(it, comps.end());
                 break; // Нода уникальна и лежит в одном конкретном временном шаге
@@ -288,9 +280,7 @@ std::shared_ptr<Experiment> ObjectRegistry::findExperimentByName(const QString& 
     return nullptr;
 }
 
-void ObjectRegistry::updateNodeData(const QUuid&                id,
-                                    vtkSmartPointer<vtkDataSet> dataSet,
-                                    double                      timestamp) {
+void ObjectRegistry::updateNodeData(const QUuid& id, vtkSmartPointer<vtkDataSet> dataSet, double timestamp) {
     auto node = m_nodes.value(id);
     if (!node)
         return;

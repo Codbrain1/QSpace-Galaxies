@@ -55,9 +55,20 @@ void SPHRendererLayer::computeRange(QOpenGLFunctions_3_3_Core* gl) {
 
     const int      w = m_physicalFBO->width(), h = m_physicalFBO->height();
     QVector<float> pixels(w * h * 4);
+
+    // QOpenGLFramebufferObject::release() resets both framebuffer targets to
+    // the default framebuffer. Preserve both bindings because auto-range adds
+    // a readback pass between the off-screen resolve and the screen pass.
+    GLint savedDrawFramebuffer = 0;
+    GLint savedReadFramebuffer = 0;
+    gl->glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &savedDrawFramebuffer);
+    gl->glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, &savedReadFramebuffer);
+
     m_physicalFBO->bind();
     gl->glReadPixels(0, 0, w, h, GL_RGBA, GL_FLOAT, pixels.data());
     m_physicalFBO->release();
+    gl->glBindFramebuffer(GL_DRAW_FRAMEBUFFER, GLuint(savedDrawFramebuffer));
+    gl->glBindFramebuffer(GL_READ_FRAMEBUFFER, GLuint(savedReadFramebuffer));
 
     float minimum           = std::numeric_limits<float>::max();
     float maximum           = -std::numeric_limits<float>::max();
@@ -67,7 +78,7 @@ void SPHRendererLayer::computeRange(QOpenGLFunctions_3_3_Core* gl) {
         const float value = pixels[i * 4];
         const float Wsum  = pixels[i * 4 + 1];
 
-        if (Wsum < 1e-12f || value < 1e-6) // Безопасная проверка float на 0
+        if (!std::isfinite(value) || !std::isfinite(Wsum) || Wsum < 1e-12f || value < 1e-6f)
             continue;
 
         minimum           = std::min(minimum, value);
@@ -75,16 +86,19 @@ void SPHRendererLayer::computeRange(QOpenGLFunctions_3_3_Core* gl) {
         hasValidParticles = true;
     }
 
-    if (hasValidParticles) {
-        m_settings->setBaseRangeMin(minimum);
-        m_settings->setBaseRangeMax(maximum);
-    } else {
-        // Если сцена совсем пустая
-        m_settings->setBaseRangeMin(0.0f);
-        m_settings->setBaseRangeMax(1.0f);
-    }
+    const float calculatedMinimum =
+        hasValidParticles && std::isfinite(minimum) && std::isfinite(maximum) &&
+                minimum <= maximum
+            ? minimum
+            : 0.0f;
+    const float calculatedMaximum =
+        hasValidParticles && std::isfinite(minimum) && std::isfinite(maximum) &&
+                minimum <= maximum
+            ? maximum
+            : 1.0f;
 
     m_needsCalibration = false;
+    m_settings->setCalculatedRange(calculatedMinimum, calculatedMaximum);
 }
 
 void SPHRendererLayer::ensureAccumFBO(const QSize& size) {
@@ -106,6 +120,7 @@ void SPHRendererLayer::ensureAccumFBO(const QSize& size) {
     fmt.setAttachment(QOpenGLFramebufferObject::NoAttachment);
     m_accumFBO.reset(new QOpenGLFramebufferObject(scaled, fmt));
     m_physicalFBO.reset(new QOpenGLFramebufferObject(scaled, fmt));
+    m_needsCalibration = m_settings && m_settings->autoRange();
 }
 
 void SPHRendererLayer::uploadBuffers(QOpenGLFunctions_3_3_Core* gl) {
@@ -115,20 +130,20 @@ void SPHRendererLayer::uploadBuffers(QOpenGLFunctions_3_3_Core* gl) {
 
     QVector<QVector3D> positions = Visualize::vtkAdapter::extractPositions(node);
     QVector<float>     scalars;
+    auto               normMode = SPHPointsLayerSettings::NormalizationMode::Unknown;
 
     if (!m_settings->colorByField().isEmpty()) {
-        scalars = Visualize::vtkAdapter::extractScalarField(node, m_settings->colorByField());
+        scalars  = Visualize::vtkAdapter::extractScalarField(node, m_settings->colorByField());
+        normMode = vtkAdapter::fieldNormolized(node, m_settings->colorByField());
+    }
 
-        auto normMode = vtkAdapter::fieldNormolized(node, m_settings->colorByField());
-        m_settings->setNormMode(normMode);
+    if (positions.isEmpty()) {
+        qWarning() << "SPHRendererLayer: DataNode contains no points";
+        return;
     }
 
     m_particleCount = positions.size();
-    if (m_particleCount == 0) {
-        qWarning() << "SPHRendererLayer: DataNode contains no points";
-        m_hasBounds = false;
-        return;
-    }
+    m_normMode      = normMode;
 
     auto bounds = vtkAdapter::getBounds(node);
 
@@ -162,16 +177,30 @@ void SPHRendererLayer::render(QOpenGLFunctions_3_3_Core* gl, const Visualize::Re
     if (!m_settings)
         return;
 
+    // QOpenGLFramebufferObject::release() binds framebuffer 0. For a
+    // QOpenGLWidget the active render target can be a non-zero internal FBO,
+    // so preserve it before the off-screen SPH passes and restore it before
+    // drawing the resolved image.
+    GLint renderTargetFramebuffer = 0;
+    gl->glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &renderTargetFramebuffer);
+
     // загружаем данные на видеокарту если были изменения
     if (m_dirty)
         uploadBuffers(gl);
 
-    if (m_particleCount == 0)
+    if (m_particleCount == 0) {
+        gl->glViewport(0, 0, ctx.viewportPx.width(), ctx.viewportPx.height());
+        gl->glDisable(GL_DEPTH_TEST);
+        gl->glEnable(GL_BLEND);
+        gl->glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        gl->glClearColor(0, 0, 0, 0);
+        gl->glClear(GL_COLOR_BUFFER_BIT);
+        gl->glDisable(GL_BLEND);
         return;
+    }
 
     // увеличиваем размер сетки если необходимо
     ensureAccumFBO(ctx.viewportPx);
-
 
     // Подтягиваем астрофизический масштаб в зависимости от выбранного слоя визуализации
     // Например, если сейчас рисуется плотность, scaleFactor = l_s. Если температура = l_Te.
@@ -216,15 +245,14 @@ void SPHRendererLayer::render(QOpenGLFunctions_3_3_Core* gl, const Visualize::Re
     gl->glClearColor(0, 0, 0, 0);
     gl->glClear(GL_COLOR_BUFFER_BIT);
     gl->glDisable(GL_DEPTH_TEST);
-    gl->glEnable(GL_BLEND);
+    gl->glDisable(GL_BLEND);
     gl->glActiveTexture(GL_TEXTURE0);
     gl->glBindTexture(GL_TEXTURE_2D, m_accumFBO->texture());
 
 
     m_physicalResolveProgram.bind();
     m_physicalResolveProgram.setUniformValue("uAccumTex", 0);
-    m_physicalResolveProgram.setUniformValue("uNormalizationMode",
-                                             static_cast<int>(m_settings->normMode()));
+    m_physicalResolveProgram.setUniformValue("uNormalizationMode", static_cast<int>(m_normMode));
 
     // Отрисовываем полноэкранный прямоугольник
     m_vaoQuad.bind();
@@ -240,7 +268,10 @@ void SPHRendererLayer::render(QOpenGLFunctions_3_3_Core* gl, const Visualize::Re
     // =========================================================================
     // ПРОХОД 3: Раскрашивание (Color Mapping) и вывод на экран
     // =========================================================================
+    gl->glBindFramebuffer(GL_DRAW_FRAMEBUFFER, GLuint(renderTargetFramebuffer));
     gl->glViewport(0, 0, ctx.viewportPx.width(), ctx.viewportPx.height());
+    gl->glDisable(GL_DEPTH_TEST);
+    gl->glDepthMask(GL_FALSE);
     gl->glEnable(GL_BLEND);
     gl->glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
@@ -275,10 +306,12 @@ void SPHRendererLayer::render(QOpenGLFunctions_3_3_Core* gl, const Visualize::Re
     gl->glDrawArrays(GL_TRIANGLES, 0, 6);
     m_vaoQuad.release();
     m_resolveProgram.release();
-    gl->glBindTexture(GL_TEXTURE_2D, 0);
-    gl->glActiveTexture(GL_TEXTURE0);
+    gl->glActiveTexture(GL_TEXTURE1);
     gl->glBindTexture(GL_TEXTURE_1D, 0);
+    gl->glActiveTexture(GL_TEXTURE0);
+    gl->glBindTexture(GL_TEXTURE_2D, 0);
     gl->glDisable(GL_BLEND);
+    gl->glDepthMask(GL_TRUE);
 }
 
 void SPHRendererLayer::releaseGL(QOpenGLFunctions_3_3_Core*) {

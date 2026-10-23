@@ -258,6 +258,7 @@ void PropertyInspector::updateWidgets() {
     index = ui->combo_colormap->findData(QVariant::fromValue(layer->getSettings()->colorMapId()));
     if (index != -1) {
         ui->combo_colormap->setCurrentIndex(index);
+        handlePaletteChange(index);
     }
 
     m_dynamicEditor->setSettings(layer->getSettings().get());

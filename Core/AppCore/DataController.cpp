@@ -162,18 +162,24 @@ void DataController::importExperiment(const QString&              experimentPath
         QString   filePath = it.next();
         QFileInfo fileinfo(filePath);
 
-        auto entityType = IO::Utils::getEntityType(fileinfo.fileName());
-        auto fileFormat = IO::Utils::getFormat(fileinfo.fileName());
-
+        auto          entityType = IO::Utils::getEntityType(fileinfo.fileName());
+        auto          fileFormat = IO::Utils::getFormat(fileinfo.fileName());
+        IO::PresetKey key;
         // Формируем схему чтения на основе выбранной версии программы
-        IO::ReadScheme scheme;
-        // if (version == IO::ModelingProgrammVersion::V2_3)
-        //     scheme = IO::SchemeFactory::createScheme_v2_3(entityType, fileFormat);
-        // else {
-        //     scheme = IO::SchemeFactory::createScheme_v2(entityType, fileFormat);
-        // }
+        key.format    = fileFormat;
+        key.type      = entityType;
+        key.mpv       = version;
+        const auto id = m_fileSchemeRegistry->findPresetId(key);
+        if (!id.has_value())
+            continue;
 
-        tasks.append({filePath, scheme});
+        const auto scheme = m_fileSchemeRegistry->getReadScheme(id.value());
+        if (!scheme.has_value())
+            continue;
+        IO::BatchTask task;
+        task.path   = filePath;
+        task.scheme = scheme.value();
+        tasks.append(task);
     }
 
     if (tasks.isEmpty()) {
@@ -452,7 +458,7 @@ void DataController::onRequestDataLoad(const QUuid& nodeId) {
         const auto schemeId = m_fileSchemeRegistry->findPresetId(key);
         if (schemeId.has_value()) {
             node->scheme = schemeId.value();
-            scheme = m_fileSchemeRegistry->getReadScheme(schemeId.value());
+            scheme       = m_fileSchemeRegistry->getReadScheme(schemeId.value());
         }
     }
 

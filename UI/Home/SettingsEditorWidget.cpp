@@ -58,6 +58,10 @@ void SettingsEditorWidget::setSettings(QSpace::Visualize::Layers::LayerSettings*
             &QSpace::Visualize::Layers::LayerSettings::changed,
             this,
             &SettingsEditorWidget::updateUiValues);
+    connect(m_settings,
+            &QSpace::Visualize::Layers::LayerSettings::calculatedRangeChanged,
+            this,
+            &SettingsEditorWidget::updateUiValues);
 }
 
 void SettingsEditorWidget::createRowForProperty(const QMetaProperty& prop) {

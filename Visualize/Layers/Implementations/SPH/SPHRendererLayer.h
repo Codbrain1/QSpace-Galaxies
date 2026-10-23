@@ -14,12 +14,14 @@ namespace QSpace::Visualize::Layers {
 class SPHRendererLayer : public IOpenGLRenderLayer {
   public:
     void update() override {
-        m_dirty = true;
+        m_dirty            = true;
+        m_needsCalibration = true;
     }
 
     void setData(std::weak_ptr<Core::DataNode> node) override {
-        m_dataNode = node;
-        m_dirty    = true;
+        m_dataNode         = node;
+        m_dirty            = true;
+        m_needsCalibration = true;
         computeBounds();
     }
 
@@ -68,9 +70,11 @@ class SPHRendererLayer : public IOpenGLRenderLayer {
     QOpenGLVertexArrayObject                 m_vaoQuad;
     QScopedPointer<QOpenGLFramebufferObject> m_accumFBO, m_physicalFBO;
 
-    int  m_particleCount    = 0;
-    bool m_dirty            = true;
-    bool m_needsCalibration = true;
+    int                                       m_particleCount    = 0;
+    bool                                      m_dirty            = true;
+    bool                                      m_needsCalibration = true;
+    SPHPointsLayerSettings::NormalizationMode m_normMode =
+        SPHPointsLayerSettings::NormalizationMode::Unknown;
 
     // добавлено — нужно для boundingBox() и авто-подгонки камеры GLViewport
     QVector3D m_boundsMin{0, 0, 0};

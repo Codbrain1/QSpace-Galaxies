@@ -95,8 +95,8 @@ LayerExplorerWidget::LayerExplorerWidget(Core::AppCore* app, QWidget* parent)
     header->setSectionResizeMode(0, QHeaderView::ResizeToContents);
     // выбор версии программы моделирвоания для загрузки файлов
     ui->comboBox_fileStructure->setItemData(0, static_cast<int>(IO::ModelingProgrammVersion::V2));
-    ui->comboBox_fileStructure->setItemData(1, static_cast<int>(IO::ModelingProgrammVersion::V2_2));
-    ui->comboBox_fileStructure->setItemData(2, static_cast<int>(IO::ModelingProgrammVersion::V2_3));
+    // ui->comboBox_fileStructure->setItemData(1, static_cast<int>(IO::ModelingProgrammVersion::V2_2));
+    ui->comboBox_fileStructure->setItemData(1, static_cast<int>(IO::ModelingProgrammVersion::V2_3));
 
     // В конструкторе LayerExplorerWidget, после ui->setupUi(this);
     m_searchPopup = new QListWidget(this);

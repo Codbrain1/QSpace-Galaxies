@@ -35,7 +35,6 @@ Q_ENUM_NS(FileFormat)
 enum class ModelingProgrammVersion
 {
   V2,
-  V2_2,
   V2_3
 };
 Q_ENUM_NS(ModelingProgrammVersion)

@@ -23,6 +23,17 @@ VideoController::VideoController(Core::ObjectRegistry* objectRegistry,
 void VideoController::initialize() {
 }
 
+void VideoController::handleNodeDataLoaded(const QUuid& nodeId) {
+    for (const auto& layers : m_snapshotPlayerSate) {
+        for (const auto& layer : layers) {
+            if (!layer || layer->dataNodeId() != nodeId)
+                continue;
+
+            layer->update();
+        }
+    }
+}
+
 void VideoController::handleTargetExperimentChange(const QUuid& experimentId) {
     // проверяем чт эксперимент существует
     if (!m_objectRegistry->containsExperiment(experimentId)) {
@@ -53,7 +64,7 @@ void VideoController::handleTargetExperimentChange(const QUuid& experimentId) {
 
     // ---- по умолчанию эталон — первый снимок (как вы и просили) ----
     handleFixedEtalonSnapshot(m_timeSliderSnapshots[0].targetSnapshot);
-    handleActivateVisualizeSnapshot(0);
+    handleActivateVisualizeSnapshot(1);
 }
 
 void VideoController::handleFixedEtalonSnapshot(const QUuid& referenceSnapshotId) {
@@ -63,6 +74,7 @@ void VideoController::handleFixedEtalonSnapshot(const QUuid& referenceSnapshotId
                            << referenceSnapshotId;
         return;
     }
+    // удаляем старое состояние, снимка
     for (const auto& [key, list] : m_snapshotPlayerSate.asKeyValueRange()) {
         for (const auto& layer : list) {
             if (layer) {
@@ -113,7 +125,7 @@ void VideoController::handleFixedEtalonSnapshot(const QUuid& referenceSnapshotId
             continue;
         }
         for (auto& layer : it.value())
-            if (layer)
+            if (layer && nodeIt.value())
                 layer->setData(nodeIt.value());
     }
 
@@ -184,8 +196,11 @@ void VideoController::requestLoadFloatWindow(int index) {
     // 3. Извлекаем нужные ID (targetSnapshot)
     for (int i = startIndex; i <= endIndex; ++i) {
         auto snapshot = m_objectRegistry->getSnapshot(m_timeSliderSnapshots[i].targetSnapshot);
+        if (!snapshot)
+            continue;
+
         for (const auto& node : snapshot->components) {
-            if (node->data == nullptr) {
+            if (node && node->data == nullptr) {
                 emit requestNodeLoad(node->id);
             }
         }

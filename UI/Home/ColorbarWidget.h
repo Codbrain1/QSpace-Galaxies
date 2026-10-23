@@ -8,7 +8,6 @@
 #include <QVector>
 #include <QWidget>
 
-// Forward-declare реального класса настроек слоя (замените на ваш include)
 namespace QSpace {
 namespace Visualize {
 namespace Layers {
@@ -29,21 +28,27 @@ class ColorBarWidget : public QWidget {
 
     // Применить настройки слоя (диапазон значений, палитра, видимость и т.д.)
     void setSettings(QSpace::Visualize::Layers::LayerSettings* settings);
+
+    // Переключение режима: true — вертикальный, false — горизонтальный
     void setOrientation(bool isVertical);
-    // Доступ к нижележащему QCustomPlot, если понадобится тонкая настройка снаружи
+
+    // Доступ к нижележащему QCustomPlot
     QCustomPlot* plot() const {
         return m_plot;
     }
 
   private:
     void setupPlot();
+    void styleActiveAxis();
     void applyGradient(const QSpace::Visualize::ColorMap& colorMap);
+
   private slots:
     void handleUpdateValues();
 
   private:
     QCustomPlot*   m_plot       = nullptr;
     QCPColorScale* m_colorScale = nullptr;
+    bool           m_isVertical = false;
 
     QSpace::Visualize::ColorMap               m_currentColorMap;
     QSpace::Visualize::Layers::LayerSettings* m_settings = nullptr;

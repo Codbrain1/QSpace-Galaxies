@@ -1,12 +1,12 @@
 #pragma once
 #include "Common/Structures/ColormapPresets.h"
-#include "LayersExport.h"
 #include <QColor>
 #include <QMetaProperty>
 #include <QObject>
 #include <QString>
 #include <QUuid>
 #include <QVariantMap>
+#include "LayersExport.h"
 
 namespace QSpace::Visualize::Layers {
 
@@ -32,8 +32,8 @@ class LAYERS_EXPORT LayerSettings : public QObject {
     Q_PROPERTY(bool          useLogScale   READ useLogScale   WRITE setUseLogScale   NOTIFY changed)
     Q_PROPERTY(double        rangeMin      READ rangeMin      WRITE setRangeMin      NOTIFY changed)
     Q_PROPERTY(double        rangeMax      READ rangeMax      WRITE setRangeMax      NOTIFY changed)
-    Q_PROPERTY(double        baseRangeMin  READ baseRangeMin  WRITE setBaseRangeMin  NOTIFY changed)
-    Q_PROPERTY(double        baseRangeMax  READ baseRangeMax  WRITE setBaseRangeMax  NOTIFY changed)
+    Q_PROPERTY(double        baseRangeMin  READ baseRangeMin                         NOTIFY calculatedRangeChanged)
+    Q_PROPERTY(double        baseRangeMax  READ baseRangeMax                         NOTIFY calculatedRangeChanged)
     Q_PROPERTY(bool          autoRange     READ autoRange     WRITE setAutoRange     NOTIFY changed)
     Q_PROPERTY(int           zOrder        READ zOrder        WRITE setZOrder        NOTIFY changed)
     Q_PROPERTY(BlendMode     blendMode     READ blendMode     WRITE setBlendMode     NOTIFY changed)
@@ -142,6 +142,23 @@ class LAYERS_EXPORT LayerSettings : public QObject {
             m_baseRangeMax = v;
             emit changed();
         }
+    }
+
+    // Обновляет диапазон, рассчитанный рендерером после проецирования на FBO.
+    // Это не пользовательское изменение настроек: общий сигнал changed()
+    // не испускается, поэтому Layer::update() не запускает рекурсивный рендер.
+    void setCalculatedRange(double min, double max) {
+        const bool minChanged = !qFuzzyCompare(m_baseRangeMin, min);
+        const bool maxChanged = !qFuzzyCompare(m_baseRangeMax, max);
+        if (!minChanged && !maxChanged)
+            return;
+
+        m_baseRangeMin = min;
+        m_baseRangeMax = max;
+        QMetaObject::invokeMethod(
+            this,
+            [this]() { emit calculatedRangeChanged(); },
+            Qt::QueuedConnection);
     }
 
     bool autoRange() const {
@@ -261,6 +278,7 @@ class LAYERS_EXPORT LayerSettings : public QObject {
 
   signals:
     void changed();
+    void calculatedRangeChanged();
 
   private:
     bool      m_isVisible = true; // видимость слоя

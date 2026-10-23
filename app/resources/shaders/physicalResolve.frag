@@ -14,7 +14,9 @@ void main() {
     if (numParticles == 0 || Wsum < 1e-12)
         discard;
 
-    float value;
+    // Unknown fields use the accumulated scalar value instead of leaving the
+    // output undefined. Undefined values break auto-range readback.
+    float value = fieldValue;
     if (uNormalizationMode == 1) {
         value = fieldValue / Wsum;
     } else if (uNormalizationMode == 2) {

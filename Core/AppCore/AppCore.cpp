@@ -77,6 +77,11 @@ void AppCore::initialize() {
             m_viewController.get(),
             &Controllers::ViewController::sceneUpdateRequested,
             Qt::QueuedConnection);
+    connect(m_dataController.get(),
+            &Controllers::DataController::nodeDataLoaded,
+            m_videoController.get(),
+            &Controllers::VideoController::handleNodeDataLoaded,
+            Qt::QueuedConnection);
 
     // регистрируем стандартные схемы для менеджера схем файлов
     m_fileSchemeRegistry->registerStandartPresets();

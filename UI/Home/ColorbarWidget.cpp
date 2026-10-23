@@ -20,96 +20,89 @@ void ColorBarWidget::setupPlot() {
     m_plot = new QCustomPlot(this);
     widgetLayout->addWidget(m_plot);
 
-    QColor themeBgColor   = this->palette().color(QPalette::Window);
-    QColor themeTextColor = this->palette().color(QPalette::WindowText);
-
-    m_plot->plotLayout()->clear();
+    QColor themeBgColor = this->palette().color(QPalette::Window);
     m_plot->setBackground(QBrush(themeBgColor));
 
-    m_plot->plotLayout()->setMargins(QMargins(0, 0, 0, 0));
-
-    // Шкала (легенда)
-    m_colorScale    = new QCPColorScale(m_plot);
-    QFont labelFont = m_colorScale->axis()->labelFont();
-    labelFont.setPointSize(10);
-    m_colorScale->axis()->setLabelFont(labelFont);
-
-    QFont tickFont = m_colorScale->axis()->tickLabelFont();
-    tickFont.setPointSize(9);
-    m_colorScale->axis()->setTickLabelFont(tickFont);
-
-    m_colorScale->setType(QCPAxis::atBottom);
-    m_colorScale->setDataRange(QCPRange(0.0, 100.0));
-
-    m_colorScale->axis()->setLabelColor(themeTextColor);
-    m_colorScale->axis()->setTickLabelColor(themeTextColor);
-
-    QPen axisPen(themeTextColor);
-    m_colorScale->axis()->setBasePen(axisPen);
-    m_colorScale->axis()->setTickPen(axisPen);
-    m_colorScale->axis()->setSubTickPen(axisPen);
-    m_colorScale->axis()->setTickLabelSide(QCPAxis::lsOutside);
-
-    m_plot->plotLayout()->addElement(0, 0, m_colorScale);
-    applyGradient(m_currentColorMap);
+    // Инициализируем шкалу в горизонтальном режиме по умолчанию
+    setOrientation(false);
 }
 
 void ColorBarWidget::setOrientation(bool isVertical) {
-    if (!m_colorScale || !m_plot)
+    if (!m_plot)
         return;
 
-    // 1. Получаем актуальный цвет текста темы
-    QColor themeTextColor = this->palette().color(QPalette::WindowText);
-    QPen   axisPen(themeTextColor);
+    m_isVertical = isVertical;
 
-    // 2. Меняем политику размеров, тип шкалы и НАСТРАИВАЕМ ОТСТУПЫ (иначе текст обрежется!)
-    if (isVertical) {
+    // 1. Полностью очищаем layout графика.
+    // Это удаляет старый экземпляр m_colorScale вместе с закэшированным горизонтальным QImage
+    m_plot->plotLayout()->clear();
+
+    // 2. Создаем новый чистый экземпляр QCPColorScale
+    m_colorScale = new QCPColorScale(m_plot);
+
+    // 3. ВАЖНО: Задаем тип ориентации ДО добавления и ДО установки градиента
+    if (m_isVertical) {
         this->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
         m_colorScale->setType(QCPAxis::atRight);
-
-        // Отступы для вертикального режима (запас справа под степени 10^x)
         m_plot->plotLayout()->setMargins(QMargins(10, 15, 65, 15));
     } else {
         this->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
         m_colorScale->setType(QCPAxis::atBottom);
-
-        // Отступы для горизонтального режима (запас снизу под подписи осей)
         m_plot->plotLayout()->setMargins(QMargins(15, 10, 15, 45));
     }
 
-    // 3. ПРИНУДИТЕЛЬНО ВОЗВРАЩАЕМ ЦВЕТА И ШРИФТЫ ТЕМЫ ПОСЛЕ СБРОСА
-    m_colorScale->axis()->setLabelColor(themeTextColor);
-    m_colorScale->axis()->setTickLabelColor(themeTextColor);
-    m_colorScale->axis()->setBasePen(axisPen);
-    m_colorScale->axis()->setTickPen(axisPen);
-    m_colorScale->axis()->setSubTickPen(axisPen);
-    m_colorScale->axis()->setTickLabelSide(QCPAxis::lsOutside);
+    m_colorScale->setDataRange(QCPRange(0.0, 100.0));
+    m_plot->plotLayout()->addElement(0, 0, m_colorScale);
 
-    // Восстанавливаем размеры шрифтов
-    QFont labelFont = m_colorScale->axis()->labelFont();
-    labelFont.setPointSize(10);
-    m_colorScale->axis()->setLabelFont(labelFont);
+    // 4. Применяем цвета темы и шрифты к активной оси
+    styleActiveAxis();
 
-    QFont tickFont = m_colorScale->axis()->tickLabelFont();
-    tickFont.setPointSize(9);
-    m_colorScale->axis()->setTickLabelFont(tickFont);
+    // 5. Применяем градиент (теперь он сгенерирует QImage строго под текущий mType)
+    applyGradient(m_currentColorMap);
 
-    // 5. Пересчитываем тикеры и диапазоны (вызываем ваш метод обновления)
+    // 6. Обновляем значения и диапазоны из m_settings (если они уже заданы)
     handleUpdateValues();
 
-    // 6. Перерисовываем
+    // 7. Принудительно обновляем геометрию layout и перерисовываем
+    m_plot->plotLayout()->update(QCPLayoutElement::upLayout);
     m_plot->replot();
 }
 
+void ColorBarWidget::styleActiveAxis() {
+    if (!m_colorScale || !m_colorScale->axis())
+        return;
+
+    QColor themeTextColor = this->palette().color(QPalette::WindowText);
+    QPen   axisPen(themeTextColor);
+
+    QCPAxis* activeAxis = m_colorScale->axis();
+    activeAxis->setRangeReversed(false);
+    activeAxis->setLabelColor(themeTextColor);
+    activeAxis->setTickLabelColor(themeTextColor);
+    activeAxis->setBasePen(axisPen);
+    activeAxis->setTickPen(axisPen);
+    activeAxis->setSubTickPen(axisPen);
+    activeAxis->setTickLabelSide(QCPAxis::lsOutside);
+
+    QFont labelFont = activeAxis->labelFont();
+    labelFont.setPointSize(10);
+    activeAxis->setLabelFont(labelFont);
+
+    QFont tickFont = activeAxis->tickLabelFont();
+    tickFont.setPointSize(9);
+    activeAxis->setTickLabelFont(tickFont);
+}
+
 void ColorBarWidget::applyGradient(const QSpace::Visualize::ColorMap& colorMap) {
+    if (!m_colorScale || !m_plot)
+        return;
+
     QCPColorGradient gradient;
     gradient.clearColorStops();
 
     if (colorMap.points.isEmpty()) {
-        // Резервный вариант - стандартный градиент QCustomPlot
         gradient = QCPColorGradient::gpJet;
     } else {
-        // Сортируем точки по позиции, чтобы порядок вставки стопов был корректным
         QVector<QSpace::Visualize::ColorPoint> sortedPoints = colorMap.points;
         std::sort(sortedPoints.begin(),
                   sortedPoints.end(),
@@ -123,9 +116,11 @@ void ColorBarWidget::applyGradient(const QSpace::Visualize::ColorMap& colorMap) 
         }
     }
 
+    // Принудительный сброс на случай повторного вызова с тем же градиентом
+    m_colorScale->setGradient(gradient.inverted());
     m_colorScale->setGradient(gradient);
-    m_currentColorMap = colorMap;
 
+    m_currentColorMap = colorMap;
     m_plot->replot();
 }
 
@@ -138,9 +133,8 @@ void ColorBarWidget::setSettings(QSpace::Visualize::Layers::LayerSettings* setti
         return;
 
     if (m_settings == settings)
-        return; // уже подключены к этому объекту — не плодим дубликаты
+        return;
 
-    // отключаем всё, что было подключено к предыдущему m_settings через this
     if (m_settings)
         disconnect(m_settings, nullptr, this, nullptr);
 
@@ -150,15 +144,20 @@ void ColorBarWidget::setSettings(QSpace::Visualize::Layers::LayerSettings* setti
             &QSpace::Visualize::Layers::LayerSettings::changed,
             this,
             &ColorBarWidget::handleUpdateValues);
+    connect(m_settings,
+            &QSpace::Visualize::Layers::LayerSettings::calculatedRangeChanged,
+            this,
+            &ColorBarWidget::handleUpdateValues);
 
-    // на случай уничтожения settings без явного setSettings(nullptr)
     connect(m_settings, &QObject::destroyed, this, [this]() { m_settings = nullptr; });
 
     handleUpdateValues();
 }
+
 void ColorBarWidget::handleUpdateValues() {
-    if (!m_settings)
+    if (!m_settings || !m_colorScale || !m_plot)
         return;
+
     QString colorByfield = m_settings->colorByField();
     QString dimension;
     if (colorByfield == "Mass") {
@@ -183,19 +182,17 @@ void ColorBarWidget::handleUpdateValues() {
         rawMin = m_settings->rangeMin();
         rawMax = m_settings->rangeMax();
     }
+
     auto   pu          = QSpace::Physics::PhysicalUnits::fromSimParams(3.72, 0.9, 5.0 / 3.0, true);
     double scaleFactor = QSpace::Physics::fieldPhysicalScale(pu, m_settings->colorByField());
     rawMin *= scaleFactor;
     rawMax *= scaleFactor;
 
-    // ---------- стилизация оси (общая для лог/линейного режима) ----------
-
     if (m_settings->useLogScale()) {
-        m_colorScale->axis()->setScaleType(QCPAxis::stLogarithmic);
+        // ВАЖНО: меняем тип шкалы через сам QCPColorScale, чтобы градиент тоже знал про логарифм
+        m_colorScale->setDataScaleType(QCPAxis::stLogarithmic);
 
-        // Создаем тикер для лог. шкалы
         QSharedPointer<QCPAxisTickerLog> logTicker(new QCPAxisTickerLog);
-        // Шаг логарифма (обычно 10)
         logTicker->setLogBase(10.0);
         logTicker->setTickCount(6);
 
@@ -203,16 +200,13 @@ void ColorBarWidget::handleUpdateValues() {
         m_colorScale->axis()->setNumberFormat("eb");
         m_colorScale->axis()->setNumberPrecision(0);
 
-        // безопасный минимум: не константа, а доля от реального максимума,
-        // чтобы не "ломать" диапазон при разных порядках величин полей
         double safeMin = (rawMin > 1e-12 * std::max(std::abs(rawMax), 1.0)) ? rawMin : rawMax * 1e-4;
         safeMin        = std::max(safeMin, 1e-12);
         double safeMax = std::max(rawMax, safeMin * 10.0);
 
         range = QCPRange(safeMin, safeMax);
-
     } else {
-        m_colorScale->axis()->setScaleType(QCPAxis::stLinear);
+        m_colorScale->setDataScaleType(QCPAxis::stLinear);
         m_colorScale->axis()->setTicker(QSharedPointer<QCPAxisTicker>(new QCPAxisTicker));
 
         m_colorScale->axis()->setNumberFormat("gb");
@@ -220,10 +214,8 @@ void ColorBarWidget::handleUpdateValues() {
         range = QCPRange(rawMin, rawMax);
     }
 
-    // 1. Устанавливаем диапазон данных для цветовой карты
+    // Устанавливаем диапазон данных и синхронизируем ось
     m_colorScale->setDataRange(range);
-
-    // 2. ВАЖНО: Синхронизируем диапазон самой оси, чтобы метки доходили до краев
     m_colorScale->axis()->setRange(range);
 
     m_plot->replot();

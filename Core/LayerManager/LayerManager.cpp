@@ -3,7 +3,9 @@
 #include "Core/StyleManager/StyleManager.h"
 #include "Visualize/Layers/LayerFactory.h"
 #include "Visualize/Views/View3D/AbstractView3D.h"
+#include <qcontainerfwd.h>
 #include "Enums/LayerEnums.h"
+#include "Session/Reflection.h"
 #include <memory>
 
 namespace QSpace::Core {
@@ -45,27 +47,67 @@ QUuid LayerManager::createLayer(std::shared_ptr<DataNode> node, std::shared_ptr<
 }
 
 std::shared_ptr<Visualize::Layers::Layer> LayerManager::createLayerCopy(const QUuid& etalonLayerId) {
-    auto it = m_layers.find(etalonLayerId);
-    if (it == m_layers.end())
+    const auto etalonIt = m_layers.constFind(etalonLayerId);
+    if (etalonIt == m_layers.cend() || !etalonIt.value()) {
+        qCWarning(LogCore) << "LayerManager::createLayerCopy: source layer not found"
+                           << etalonLayerId;
         return nullptr;
-    auto etalonLayer = it.value();
-    auto view        = etalonLayer->getView().lock();
+    }
+
+    const auto& etalonLayer = etalonIt.value();
+    const auto  view        = etalonLayer->getView().lock();
+    if (!view) {
+        qCWarning(LogCore) << "LayerManager::createLayerCopy: source layer has no live view"
+                           << etalonLayerId;
+        return nullptr;
+    }
 
     auto layer = std::make_shared<Visualize::Layers::Layer>(etalonLayer->name(), view);
-
-    auto renderEngine = Visualize::Layers::LayerFactory::createLayerRenderer(Visualize::Layers::RenderLayerType::SPH);
-
-    if (!renderEngine)
+    if (!layer) {
+        qCWarning(LogCore) << "LayerManager::createLayerCopy: failed to allocate layer";
         return nullptr;
+    }
+
+    auto renderEngine = Visualize::Layers::LayerFactory::createLayerRenderer(
+        Visualize::Layers::RenderLayerType::SPH);
+    if (!renderEngine) {
+        qCWarning(LogCore) << "LayerManager::createLayerCopy: failed to create render engine"
+                           << etalonLayerId;
+        return nullptr;
+    }
 
     layer->assignEngine(renderEngine);
-    layer->update();
-    // TODO: заменить на методы рефлексии
-    // layer->getSettings()->fromVariantMap(etalonLayer->getSettings()->toVariantMap());
+    auto layerSettings = layer->getSettings();
+    if (!layerSettings) {
+        qCWarning(LogCore) << "LayerManager::createLayerCopy: render engine has no settings"
+                           << etalonLayerId;
+        return nullptr;
+    }
 
-    // 5. Регистрация в индексах
-    m_layers.insert(layer->layerId(), layer);
-    m_viewToLayers[view.get()].append(layer->layerId());
+    if (const auto etalonSettings = etalonLayer->getSettings()) {
+        const auto settingsMap = QSpace::Reflection::QObjectToVariantMap(etalonSettings.get());
+        if (!settingsMap.isEmpty()) {
+            const auto result =
+                QSpace::Reflection::variantMapToQObject(settingsMap, layerSettings.get());
+            if (!result.success) {
+                qCWarning(LogCore) << "LayerManager::createLayerCopy: failed to restore settings"
+                                   << etalonLayerId;
+                return nullptr;
+            }
+        } else {
+            layerSettings->setColorByField(QStringLiteral("Mass"));
+        }
+    } else {
+        layerSettings->setColorByField(QStringLiteral("Mass"));
+    }
+
+    layer->update();
+    if (!registerLayer(layer)) {
+        qCWarning(LogCore) << "LayerManager::createLayerCopy: failed to register copy"
+                           << etalonLayerId;
+        return nullptr;
+    }
+
     return layer;
 }
 
@@ -186,8 +228,7 @@ QList<std::shared_ptr<Visualize::Layers::Layer>> LayerManager::getLayersForNode(
 
 void LayerManager::updateNodeMasterSettings(const QUuid& nodeId) {
     const auto layers = getLayersForNode(nodeId);
-    const auto node =
-        (!layers.isEmpty() && layers.front()) ? layers.front()->dataNode() : nullptr;
+    const auto node   = (!layers.isEmpty() && layers.front()) ? layers.front()->dataNode() : nullptr;
 
     for (const auto& layer : layers) {
         if (!layer || !layer->IsSyncedWithMaster())

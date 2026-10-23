@@ -104,7 +104,7 @@ public:
 
 
   private:
-    float             m_smoothingRadius      = 0.05f;
+    float             m_smoothingRadius      = 0.001f;
     bool              m_autoSmoothingRadius  = false;
     NormalizationMode m_normMode             = NormalizationMode::Extensive;
     float             m_accumResolutionScale = 1.0f;
