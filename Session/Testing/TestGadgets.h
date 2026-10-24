@@ -1,9 +1,14 @@
 
 #pragma once
+#include <QColor>
+#include <QDateTime>
+#include <QHash>
 #include <QList>
 #include <QMap>
 #include <QObject>
 #include <QString>
+#include <QUuid>
+#include <QVariant>
 #include <qtmetamacros.h>
 
 namespace TestTypes {
@@ -100,6 +105,34 @@ struct ComplexGadget {
 };
 
 // Гаджет с последовательной и ассоциативной коллекциями.
+struct QtValueGadget {
+    Q_GADGET
+    Q_PROPERTY(QUuid uuid READ uuid WRITE setUuid)
+    Q_PROPERTY(QColor color READ color WRITE setColor)
+    Q_PROPERTY(QDateTime timestamp READ timestamp WRITE setTimestamp)
+    Q_PROPERTY(QHash<QString, int> values READ values WRITE setValues)
+    Q_PROPERTY(QList<QUuid> ids READ ids WRITE setIds)
+
+  public:
+    QUuid uuid() const { return m_uuid; }
+    void setUuid(const QUuid& value) { m_uuid = value; }
+    QColor color() const { return m_color; }
+    void setColor(const QColor& value) { m_color = value; }
+    QDateTime timestamp() const { return m_timestamp; }
+    void setTimestamp(const QDateTime& value) { m_timestamp = value; }
+    QHash<QString, int> values() const { return m_values; }
+    void setValues(const QHash<QString, int>& value) { m_values = value; }
+    QList<QUuid> ids() const { return m_ids; }
+    void setIds(const QList<QUuid>& value) { m_ids = value; }
+
+  private:
+    QUuid m_uuid;
+    QColor m_color;
+    QDateTime m_timestamp;
+    QHash<QString, int> m_values;
+    QList<QUuid> m_ids;
+};
+
 struct CollectionGadget {
     Q_GADGET
     Q_PROPERTY(QList<SimpleGadget> items READ items WRITE setItems)
@@ -143,6 +176,9 @@ struct CollectionGadget {
 Q_DECLARE_METATYPE(TestTypes::SimpleGadget)
 Q_DECLARE_METATYPE(TestTypes::ComplexGadget)
 Q_DECLARE_METATYPE(TestTypes::CollectionGadget)
+Q_DECLARE_METATYPE(TestTypes::QtValueGadget)
+using IntHash = QHash<QString, int>;
+Q_DECLARE_METATYPE(IntHash)
 Q_DECLARE_METATYPE(QList<TestTypes::SimpleGadget>)
 using SimpleGadgetMap = QMap<QString, TestTypes::SimpleGadget>;
 using IntMap          = QMap<QString, int>;

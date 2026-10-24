@@ -11,7 +11,7 @@ endif()
 set(CMAKE_CXX_STANDARD 20) # стандарт языка 23
 set(CMAKE_CXX_STANDARD_REQUIRED ON)#обязательный стандарт языка
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-option(ENABLE_TESTS "Build Tests" OFF) #опция переключения между тестами
+option(ENABLE_TESTS "Build Tests" ON) #опция переключения между тестами
 
 # 2. Настройка окружения проекта (Compiler)
 

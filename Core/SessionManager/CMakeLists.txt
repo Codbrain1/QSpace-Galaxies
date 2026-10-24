@@ -1,4 +1,4 @@
-# add_subdirectory(Testing)
+add_subdirectory(Testing)
 add_library(SessionManager STATIC)
 
 target_sources(SessionManager PRIVATE 

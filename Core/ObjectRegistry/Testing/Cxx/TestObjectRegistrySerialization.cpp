@@ -17,6 +17,12 @@ class TestObjectRegistrySerializer : public QObject {
     void testSerializeObjectRegistrySeveralObjects();
     void testDeserializeObjectRegistry();
     void testDeserializeObjectRegistrySeveralObjects();
+    void testEmptyRegistry();
+    void testDuplicateExperimentNamesAndEmptyContainers();
+    void testNonstandardDataNodeFieldsAndNullData();
+    void testRejectsDuplicateIds();
+    void testRejectsMissingReferences();
+    void testFullRoundTripPreservesOrderAndFields();
 };
 
 void TestObjectRegistrySerializer::init() {
@@ -261,6 +267,156 @@ void TestObjectRegistrySerializer::testDeserializeObjectRegistry() {
     QCOMPARE(node->stats, dto.nodes.first().stats);
     QCOMPARE(node->format, dto.nodes.first().format);
     QCOMPARE(node->scheme, dto.nodes.first().scheme);
+}
+
+void TestObjectRegistrySerializer::testEmptyRegistry() {
+    objectRegistry = std::make_unique<QSpace::Core::ObjectRegistry>();
+    const auto dto = QSpace::Core::ObjectRegistrySerializer::toDTO(objectRegistry.get());
+    QVERIFY(dto.has_value());
+    QVERIFY(dto->experiments.isEmpty());
+    QVERIFY(dto->snapshots.isEmpty());
+    QVERIFY(dto->nodes.isEmpty());
+
+    QSpace::Core::ObjectRegistry restored;
+    QVERIFY(QSpace::Core::ObjectRegistrySerializer::fromDTO(*dto, &restored));
+    QVERIFY(restored.getAllExperiments().isEmpty());
+    QVERIFY(restored.getAllSnapshots().isEmpty());
+    QVERIFY(restored.getAllNodes().isEmpty());
+}
+
+void TestObjectRegistrySerializer::testDuplicateExperimentNamesAndEmptyContainers() {
+    objectRegistry = std::make_unique<QSpace::Core::ObjectRegistry>();
+    auto first = std::make_shared<QSpace::Core::Experiment>("Same name");
+    auto second = std::make_shared<QSpace::Core::Experiment>("Same name");
+    first->addSnapshot(std::make_shared<QSpace::Core::Snapshot>("Empty snapshot", 1.0));
+    objectRegistry->registerExperiment(first);
+    objectRegistry->registerExperiment(second);
+
+    const auto dto = QSpace::Core::ObjectRegistrySerializer::toDTO(objectRegistry.get());
+    QVERIFY(dto.has_value());
+    QCOMPARE(dto->experiments.size(), 2);
+    QCOMPARE(dto->experiments.at(0).name, dto->experiments.at(1).name);
+    const auto experimentWithSnapshot = std::find_if(
+        dto->experiments.cbegin(), dto->experiments.cend(), [](const auto& experiment) {
+            return experiment.snapshots.size() == 1;
+        });
+    QVERIFY(experimentWithSnapshot != dto->experiments.cend());
+    QCOMPARE(experimentWithSnapshot->snapshots.first(), first->snapshots.first()->id);
+    QCOMPARE(dto->snapshots.size(), 1);
+    QVERIFY(dto->snapshots.first().nodes.isEmpty());
+
+    QSpace::Core::ObjectRegistry restored;
+    QVERIFY(QSpace::Core::ObjectRegistrySerializer::fromDTO(*dto, &restored));
+    QCOMPARE(restored.getAllExperiments().size(), 2);
+    QCOMPARE(restored.getAllSnapshots().size(), 1);
+    QVERIFY(restored.getAllSnapshots().first()->components.isEmpty());
+}
+
+void TestObjectRegistrySerializer::testNonstandardDataNodeFieldsAndNullData() {
+    objectRegistry = std::make_unique<QSpace::Core::ObjectRegistry>();
+    auto node = std::make_shared<QSpace::Core::DataNode>(nullptr, "");
+    node->path = QString();
+    node->scheme = QUuid();
+    node->format = QSpace::IO::FileFormat::Unknown;
+    node->stats.timestamp = -42.5;
+    node->stats.cellCount = 0;
+    node->stats.bounds[0] = -1.0;
+    node->stats.bounds[5] = 99.0;
+    node->stats.center[2] = 7.5;
+    auto snapshot = std::make_shared<QSpace::Core::Snapshot>("Snapshot");
+    snapshot->addComponent(node);
+    auto experiment = std::make_shared<QSpace::Core::Experiment>("Experiment");
+    experiment->addSnapshot(snapshot);
+    objectRegistry->registerExperiment(experiment);
+
+    const auto dto = QSpace::Core::ObjectRegistrySerializer::toDTO(objectRegistry.get());
+    QVERIFY(dto.has_value());
+    QCOMPARE(dto->nodes.size(), 1);
+    QCOMPARE(dto->nodes.first().name, QString());
+    QCOMPARE(dto->nodes.first().path, QString());
+    QVERIFY(dto->nodes.first().scheme.isNull());
+    QCOMPARE(dto->nodes.first().format, QSpace::IO::FileFormat::Unknown);
+    QCOMPARE(dto->nodes.first().stats, node->stats);
+
+    QSpace::Core::ObjectRegistry restored;
+    QVERIFY(QSpace::Core::ObjectRegistrySerializer::fromDTO(*dto, &restored));
+    const auto restoredNode = restored.getNode(node->id);
+    QVERIFY(restoredNode);
+    QVERIFY(!restoredNode->isLoaded());
+    QCOMPARE(restoredNode->label, QString());
+    QCOMPARE(restoredNode->path, QString());
+    QVERIFY(restoredNode->scheme.isNull());
+    QCOMPARE(restoredNode->format, QSpace::IO::FileFormat::Unknown);
+    QCOMPARE(restoredNode->type, node->type);
+    QCOMPARE(restoredNode->stats, node->stats);
+}
+
+void TestObjectRegistrySerializer::testRejectsDuplicateIds() {
+    QSpace::Session::ObjectRegistryDTO dto;
+    QSpace::Session::ExperimentDTO first;
+    first.id = QUuid::createUuid();
+    first.name = "first";
+    auto second = first;
+    second.name = "second";
+    dto.experiments = {first, second};
+
+    QSpace::Core::ObjectRegistry restored;
+    QVERIFY(!QSpace::Core::ObjectRegistrySerializer::fromDTO(dto, &restored));
+    QVERIFY(restored.getAllExperiments().isEmpty());
+}
+
+void TestObjectRegistrySerializer::testRejectsMissingReferences() {
+    QSpace::Session::ObjectRegistryDTO dto;
+    QSpace::Session::ExperimentDTO experiment;
+    experiment.id = QUuid::createUuid();
+    experiment.snapshots.append(QUuid::createUuid());
+    dto.experiments.append(experiment);
+
+    QSpace::Core::ObjectRegistry restored;
+    QVERIFY(!QSpace::Core::ObjectRegistrySerializer::fromDTO(dto, &restored));
+    QVERIFY(restored.getAllExperiments().isEmpty());
+
+    dto.experiments.clear();
+    QSpace::Session::SnapshotDTO snapshot;
+    snapshot.id = QUuid::createUuid();
+    snapshot.nodes.append(QUuid::createUuid());
+    dto.snapshots.append(snapshot);
+    QVERIFY(!QSpace::Core::ObjectRegistrySerializer::fromDTO(dto, &restored));
+}
+
+void TestObjectRegistrySerializer::testFullRoundTripPreservesOrderAndFields() {
+    objectRegistry = std::make_unique<QSpace::Core::ObjectRegistry>();
+    auto experiment = std::make_shared<QSpace::Core::Experiment>("Ordered");
+    auto first = std::make_shared<QSpace::Core::Snapshot>("first", 1.0);
+    auto second = std::make_shared<QSpace::Core::Snapshot>("second", 2.0);
+    for (int i = 0; i < 2; ++i) {
+        auto node = std::make_shared<QSpace::Core::DataNode>(nullptr, QString("node%1").arg(i), i,
+                                                              QSpace::Visualize::EntityType::Gas);
+        node->path = QString("path%1").arg(i);
+        node->scheme = QUuid::createUuid();
+        node->format = QSpace::IO::FileFormat::BIN;
+        node->stats.cellCount = i + 10;
+        (i == 0 ? first : second)->addComponent(node);
+    }
+    experiment->addSnapshot(first);
+    experiment->addSnapshot(second);
+    objectRegistry->registerExperiment(experiment);
+
+    const auto dto = QSpace::Core::ObjectRegistrySerializer::toDTO(objectRegistry.get());
+    QVERIFY(dto.has_value());
+    QSpace::Core::ObjectRegistry restored;
+    QVERIFY(QSpace::Core::ObjectRegistrySerializer::fromDTO(*dto, &restored));
+
+    const auto restoredExperiment = restored.getExperiment(experiment->id);
+    QVERIFY(restoredExperiment);
+    QCOMPARE(restoredExperiment->snapshots.size(), 2);
+    QCOMPARE(restoredExperiment->snapshots.at(0)->id, first->id);
+    QCOMPARE(restoredExperiment->snapshots.at(1)->id, second->id);
+    QCOMPARE(restoredExperiment->snapshots.at(0)->components.size(), 1);
+    QCOMPARE(restoredExperiment->snapshots.at(1)->components.size(), 1);
+    QCOMPARE(restoredExperiment->snapshots.at(0)->components.first()->label, QString("node0"));
+    QCOMPARE(restoredExperiment->snapshots.at(1)->components.first()->label, QString("node1"));
+    QCOMPARE(restored.getAllNodes().size(), 2);
 }
 
 void TestObjectRegistrySerializer::testDeserializeObjectRegistrySeveralObjects() {

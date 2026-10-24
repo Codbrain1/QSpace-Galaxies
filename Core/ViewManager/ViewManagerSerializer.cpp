@@ -4,6 +4,7 @@
 #include "Visualize/Views/ViewFactory.h"
 #include <qloggingcategory.h>
 #include "ViewManager.h"
+#include <QSet>
 #include <optional>
 
 namespace QSpace::Core {
@@ -30,27 +31,54 @@ bool ViewManagerSerializer::fromDTO(const Session::ViewManagerDTO& dto, Core::Vi
         return false;
     }
 
-    viewManager->clear();
-    bool allOk = true;
+    if (dto.views.isEmpty()) {
+        if (!dto.mainViewId.isNull()) {
+            qCWarning(LogCore) << "Main view" << dto.mainViewId << "is missing from an empty DTO";
+            return false;
+        }
+        viewManager->clear();
+        return true;
+    }
 
+    if (dto.mainViewId.isNull()) {
+        qCWarning(LogCore) << "View DTO does not define a main view";
+        return false;
+    }
+
+    QSet<QUuid> viewIds;
+    for (const auto& viewDto : dto.views) {
+        if (viewDto.id.isNull() || viewIds.contains(viewDto.id)) {
+            qCWarning(LogCore) << "View DTO contains a null or duplicate ID" << viewDto.id;
+            return false;
+        }
+        viewIds.insert(viewDto.id);
+    }
+    if (!viewIds.contains(dto.mainViewId)) {
+        qCWarning(LogCore) << "Main view" << dto.mainViewId << "is missing from DTO";
+        return false;
+    }
+
+    QList<std::shared_ptr<Visualize::Views::AbstractView>> restoredViews;
+    restoredViews.reserve(dto.views.size());
     for (const auto& viewDto : dto.views) {
         auto view = fromDTO(viewDto);
-        if (view) {
-            viewManager->addView(view);
-        } else {
-            allOk = false;
-            qCWarning(LogCore) << "view: " << viewDto.id << " is not deserialized";
+        if (!view) {
+            qCWarning(LogCore) << "View" << viewDto.id << "is not deserialized";
+            return false;
+        }
+        restoredViews.append(std::move(view));
+    }
+
+    viewManager->clear();
+    for (const auto& view : restoredViews) {
+        if (!viewManager->addView(view)) {
+            qCWarning(LogCore) << "View" << view->id() << "could not be added";
+            return false;
         }
     }
 
-    if (viewManager->getView(dto.mainViewId)) {
-        viewManager->setMainView(dto.mainViewId);
-    } else {
-        allOk = false;
-        qCWarning(LogCore) << "Main view" << dto.mainViewId << "was not restored, main view not set";
-    }
-
-    return allOk;
+    viewManager->setMainView(dto.mainViewId);
+    return true;
 }
 
 std::optional<Session::ViewDTO>

@@ -267,7 +267,8 @@ DeserializationResult variantMapToQObject(const QVariantMap& map, QObject* obj) 
             continue;
         }
 
-        if (prop.write(obj, value)) {
+        const QVariant convertedValue = deserializeValue(prop.metaType().id(), value, prop);
+        if (convertedValue.isValid() && prop.write(obj, convertedValue)) {
             result.setPropertiesCount++;
         } else {
             result.writeFailedKeys.append(key);

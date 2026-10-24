@@ -9,6 +9,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonParseError>
+#include <algorithm>
 #include <qfileinfo.h>
 #include <qloggingcategory.h>
 #include <qstringview.h>
@@ -176,27 +177,66 @@ bool SessionManager::loadProject(const QString& filePath) {
         emit errorOccurred("Failed to decode project file");
         return false;
     }
+
+    static const QStringList requiredFields = {
+        QStringLiteral("objregDTO"),
+        QStringLiteral("viewmanDTO"),
+        QStringLiteral("layermanDTO"),
+        QStringLiteral("colormapmanDTO")};
+    for (const auto& field : requiredFields) {
+        if (!map->contains(field)) {
+            emit errorOccurred("Project file has invalid schema");
+            return false;
+        }
+    }
+
     const auto dto = QSpace::Reflection::variantMapToGadget<QSpace::Session::ProjectDTO>(*map);
     if (!fromProjectDTO(dto)) {
         emit errorOccurred("Failed to restore project from DTO");
         return false;
     }
 
+    emit projectLoaded(QSpace::Session::ProjectState{});
     return true;
 }
 
 QSpace::Session::ProjectDTO SessionManager::createProjectDTO() const {
     QSpace::Session::ProjectDTO dto;
 
-    dto.objregDTO      = ObjectRegistrySerializer::toDTO(m_registry).value();
-    dto.layermanDTO    = LayerManagerSerializer::toDTO(m_layerManager).value();
-    dto.viewmanDTO     = ViewManagerSerializer::toDTO(m_viewManager).value();
+    if (m_registry) {
+        if (const auto registryDto = ObjectRegistrySerializer::toDTO(m_registry))
+            dto.objregDTO = *registryDto;
+    }
+    if (m_layerManager) {
+        if (const auto layerDto = LayerManagerSerializer::toDTO(m_layerManager))
+            dto.layermanDTO = *layerDto;
+    }
+    if (m_viewManager) {
+        if (const auto viewDto = ViewManagerSerializer::toDTO(m_viewManager))
+            dto.viewmanDTO = *viewDto;
+    }
     dto.colormapmanDTO = QSpace::Visualize::ColorMapManagerSerializer::toDTO();
 
     return dto;
 }
 
 bool SessionManager::fromProjectDTO(const QSpace::Session::ProjectDTO& dto) {
+    if (!m_registry || !m_layerManager || !m_viewManager)
+        return false;
+
+    // Validate references before mutating the live managers. This keeps a failed
+    // restore from leaving a partially restored project behind.
+    for (const auto& layer : dto.layermanDTO.layers) {
+        const bool hasNode = std::any_of(dto.objregDTO.nodes.cbegin(),
+                                         dto.objregDTO.nodes.cend(),
+                                         [&](const auto& node) { return node.id == layer.nodeId; });
+        const bool hasView = std::any_of(dto.viewmanDTO.views.cbegin(),
+                                         dto.viewmanDTO.views.cend(),
+                                         [&](const auto& view) { return view.id == layer.viewId; });
+        if (!hasNode || !hasView)
+            return false;
+    }
+
     // Сначала удаляем старые слои: они владеют ссылками на старые view и
     // должны отсоединиться от OpenGL/Qt до уничтожения представлений.
     m_layerManager->clear();

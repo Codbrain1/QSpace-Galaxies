@@ -19,6 +19,9 @@ class LAYERMANAGER_EXPORT LayerManager : public QObject {
     ~LayerManager();
 
     QUuid createLayer(std::shared_ptr<DataNode> node, std::shared_ptr<Visualize::Views::AbstractView> view);
+    QUuid createLayer(std::shared_ptr<DataNode> node,
+                      std::shared_ptr<Visualize::Views::AbstractView> view,
+                      Visualize::Layers::RenderLayerType renderType);
 
     std::shared_ptr<Visualize::Layers::Layer> createLayerCopy(const QUuid& etalonLayerId);
     bool                                      registerLayer(std::shared_ptr<Visualize::Layers::Layer> layer);
