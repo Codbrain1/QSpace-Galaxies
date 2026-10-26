@@ -58,7 +58,8 @@ if(WIN32) # на виндовс только gui
         WIN32_EXECUTABLE TRUE
     )
     target_sources(QSpace PRIVATE ${PROJECT_SOURCE_DIR}/app/resources/app_icon.rc)
-    set(VTK_BIN_DIR "D:/NIR/NIR_6_semestr/vtk/vtk-install-ffmpeg-wmf-qt6_11-dll-OpenMP/bin")
+    get_filename_component(VTK_INSTALL_DIR "${VTK_DIR}/../../.." ABSOLUTE)
+    set(VTK_BIN_DIR "${VTK_INSTALL_DIR}/bin")
 
     add_custom_command(TARGET QSpace POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory 
@@ -67,7 +68,7 @@ if(WIN32) # на виндовс только gui
     COMMENT "Copying VTK binaries..."
     )
     add_custom_command(TARGET QSpace POST_BUILD
-    COMMAND "C:/Qt/6.11.1/mingw_64/bin/windeployqt.exe"
+    COMMAND ${QT_DIR}/bin/windeployqt.exe
     --compiler-runtime
         $<TARGET_FILE:QSpace>
             COMMENT "Running windeployqt..."

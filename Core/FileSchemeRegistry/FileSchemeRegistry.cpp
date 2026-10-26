@@ -93,6 +93,7 @@ QList<IO::WriteSchemeUI> FileSchemeRegistry::allWriteSchemes() {
 void FileSchemeRegistry::clear() {
     m_readSchemes.clear();
     m_writeSchemes.clear();
+    m_userOverrideIndexReadScheme.clear();
     emit cleared();
 }
 

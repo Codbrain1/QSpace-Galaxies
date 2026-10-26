@@ -57,13 +57,12 @@ void ProjectController::saveCurrentProjectAs(const QString& projectPath) {
         return;
     }
 
-    m_sessionState.projectFilePath = projectPath;
-    if (m_sessionState.projectName.isEmpty()) {
-        m_sessionState.projectName = QFileInfo(projectPath).baseName();
-    }
-
-    const bool ok = m_sessionManager->saveProject(m_sessionState.projectFilePath, *format);
+    const bool ok = m_sessionManager->saveProject(projectPath, *format);
     if (ok) {
+        m_sessionState.projectFilePath = projectPath;
+        if (m_sessionState.projectName.isEmpty()) {
+            m_sessionState.projectName = QFileInfo(projectPath).baseName();
+        }
         m_sessionState.isDirty = false;
         emit sessionStateChanged(m_sessionState);
     } else {

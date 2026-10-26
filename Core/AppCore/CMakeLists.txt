@@ -1,3 +1,7 @@
+if(ENABLE_TESTS)
+    add_subdirectory(Testing)
+endif()
+
 add_library(AppCore STATIC)
 target_sources(AppCore PRIVATE 
             AppCore.h

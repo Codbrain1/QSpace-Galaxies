@@ -34,7 +34,6 @@ BINReader::~BINReader() = default;
 
 ReadResult BINReader::read(const QString& path, const ReadScheme& scheme) const {
     // >---------------   1. ===== Валидация данных =====   ---------------<
-    const auto& config = std::get<ColumnScheme>(scheme);
     if (!path.endsWith(".bin")) {
         qCCritical(LogIO) << "BinReader requires .bin file format: " + path;
         return {nullptr,
@@ -59,6 +58,7 @@ ReadResult BINReader::read(const QString& path, const ReadScheme& scheme) const 
                 scheme,
                 ReadStatus::InvalidFileStructure};
     }
+    const auto& config = std::get<ColumnScheme>(scheme);
     if (!file.open(QIODevice::ReadOnly)) {
         qCCritical(LogIO) << "file " << file.fileName() << "is not Open!";
         return {nullptr,
@@ -98,7 +98,7 @@ ReadResult BINReader::read(const QString& path, const ReadScheme& scheme) const 
     double timestamp = 0;
     headerStream >> N;
     headerStream >> timestamp;
-    if (N <= 0) {
+    if (headerStream.status() != QDataStream::Ok || N <= 0) {
         qCritical(LogIO) << "Incorrect number of particles: " << N;
         return {nullptr,
                 path,

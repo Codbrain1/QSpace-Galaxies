@@ -5,6 +5,9 @@ set(IO_BIN
 BIN/BINReader.h
 BIN/BINReader.cpp
 
+# BINWriter is not implemented yet; keep it out of production targets.
+# BIN/BINWriter.h
+# BIN/BINWriter.cpp
 )
 # IO_GRD
 # IO_HDF5

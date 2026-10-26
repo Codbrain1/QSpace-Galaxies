@@ -51,8 +51,12 @@ QUuid ViewController::createView(Visualize::Views::ViewType type) {
 }
 
 void ViewController::removeView(const QUuid& viewId) {
+    auto view = m_viewManager->getView(viewId);
+    if (!view)
+        return;
+    if (m_layerManager)
+        m_layerManager->removeAllLayersForView(view.get());
     m_viewManager->removeView(viewId);
-    emit viewRemoved(viewId);
 }
 
 Visualize::Views::AbstractView* ViewController::getView(const QUuid& viewId) {

@@ -11,15 +11,23 @@ endif()
 set(CMAKE_CXX_STANDARD 20) # стандарт языка 23
 set(CMAKE_CXX_STANDARD_REQUIRED ON)#обязательный стандарт языка
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-option(ENABLE_TESTS "Build Tests" OFF) #опция переключения между тестами
+option(ENABLE_TESTS "Build Tests" ON) #опция переключения между тестами
+option(ENABLE_COVERAGE "Enable code coverage instrumentation" OFF)
 
+if(ENABLE_COVERAGE AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    add_compile_options(--coverage -O0 -g)
+    add_link_options(--coverage)
+endif()
 # 2. Настройка окружения проекта (Compiler)
 
 #=========== Настройки для виндовс ==============
 if(WIN32) 
+    set(QT_DIR "C:/Qt/6.11.1/mingw_64")
+    set(VTK_DIR "${CMAKE_CURRENT_SOURCE_DIR}/extern/vtk9.5-dll")
     set(CMAKE_PREFIX_PATH 
-    "C:/Qt/6.11.1/mingw_64"
-    "D:/NIR/NIR_6_semestr/vtk/vtk-install-ffmpeg-wmf-qt6_11-dll-OpenMP/lib/cmake/vtk-9.5")
+        ${QT_DIR}
+        ${VTK_DIR}/lib/cmake/vtk-9.5
+    )
     # Отключение Vulkan
     set(QT_NO_VULKAN ON)
     set(CMAKE_CXX_COMPILER "C:/Qt/Tools/mingw1310_64/bin/g++.exe")
@@ -34,30 +42,21 @@ find_package(OpenMP REQUIRED)
 # Widgets - различные виджеты(окна, кнопки и т.д.)
 # LinguistTools - модуль с переводами
 find_package(Qt6 REQUIRED COMPONENTS 
-            # Quick
-            # Qml
             Core 
             Gui 
             Widgets 
+            OpenGL
+            OpenGLWidgets
             LinguistTools
             )
-find_package(VTK REQUIRED COMPONENTS 
-            CommonCore 
-            CommonDataModel 
-            CommonColor
-            IOCore
-            IOOggTheora
-            IOVideo
-            GUISupportQt
-            ImagingHybrid
-            RenderingVolumeOpenGL2
-            RenderingCore             # Обязательно
-            RenderingOpenGL2          # Обязательно
-            InteractionStyle
-            RenderingVolume          # Абстрактный интерфейс объема
-            RenderingVolumeOpenGL2   # Реализация GPU-рейкастинга
-            FiltersPoints
-            )
+find_package(VTK REQUIRED COMPONENTS
+    CommonCore
+    CommonDataModel
+    CommonColor
+    IOOggTheora
+    InteractionStyle
+    FiltersPoints
+)
 
 # автоматическая генерация для qt
 #------------------------------------

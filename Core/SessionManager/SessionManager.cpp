@@ -144,7 +144,11 @@ bool SessionManager::saveProject(const QString& filePath, QSpace::Session::Proje
         emit errorOccurred("Unsupported project format");
         return false;
     }
-    return m_storage_session->save(filePath, codec->encode(dataMap));
+    const bool saved = m_storage_session->save(filePath, codec->encode(dataMap));
+    if (!saved) {
+        emit errorOccurred("Failed to save project file");
+    }
+    return saved;
 }
 
 bool SessionManager::loadProject(const QString& filePath) {

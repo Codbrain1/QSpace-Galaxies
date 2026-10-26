@@ -1,3 +1,7 @@
+if(ENABLE_TESTS)
+    add_subdirectory(Testing)
+endif()
+
 add_library(DataTreeModel STATIC)
 target_sources(DataTreeModel PRIVATE
             DataTreeModel.h

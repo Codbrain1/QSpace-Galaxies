@@ -6,6 +6,7 @@
 #include <qobject.h>
 #include <qtest.h>
 #include <qtestcase.h>
+#include <QTemporaryDir>
 #include <qtmetamacros.h>
 #include <vtkDataArray.h>
 #include <vtkPointData.h>
@@ -114,6 +115,51 @@ class TestBINReaderRead : public QObject {
         auto   value        = qAbs(arr->GetTuple1(N / 2));
         QVERIFY(qAbs(value - expectedAttr) < 1e-6);
         QFile::remove(path);
+    }
+
+    void testRejectsIncompleteHeaderAndData() {
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        const auto scheme = createScheme(true, VTK_DOUBLE, VTK_DOUBLE);
+        BINReader reader;
+
+        const QString headerPath = dir.filePath("header.bin");
+        QFile header(headerPath);
+        QVERIFY(header.open(QIODevice::WriteOnly));
+        QDataStream headerStream(&header);
+        headerStream.setByteOrder(QDataStream::LittleEndian);
+        headerStream << qint32(1);
+        header.close();
+        const auto headerResult = reader.read(headerPath, scheme);
+        QCOMPARE(headerResult.status, ReadStatus::InvalidFileStructure);
+        QVERIFY(!headerResult.data);
+
+        const QString dataPath = dir.filePath("data.bin");
+        QFile data(dataPath);
+        QVERIFY(data.open(QIODevice::WriteOnly));
+        QDataStream dataStream(&data);
+        dataStream.setByteOrder(QDataStream::LittleEndian);
+        dataStream << qint32(1) << double(1.0) << double(42.0);
+        data.close();
+        const auto dataResult = reader.read(dataPath, scheme);
+        QCOMPARE(dataResult.status, ReadStatus::UnknownError);
+        QVERIFY(!dataResult.data);
+    }
+
+    void testRejectsInvalidSchemes() {
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        const QString path = dir.filePath("scheme.bin");
+        BINReader reader;
+        auto invalidVariant = reader.read(path, ReadScheme{});
+        QCOMPARE(invalidVariant.status, ReadStatus::InvalidFileStructure);
+        QVERIFY(!invalidVariant.data);
+
+        auto invalidColumn = std::get<ColumnScheme>(createScheme(true, VTK_DOUBLE, VTK_DOUBLE));
+        invalidColumn.columnsPolicy[0].numberOfComponents = 0;
+        const auto invalidResult = reader.read(path, invalidColumn);
+        QCOMPARE(invalidResult.status, ReadStatus::InvalidFileStructure);
+        QVERIFY(!invalidResult.data);
     }
 
   private:

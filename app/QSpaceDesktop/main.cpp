@@ -9,16 +9,12 @@
 #include <QTextStream>
 #include <QTranslator> //заголовок класса для перевода на различные языки
 #include <QVBoxLayout>
-#include <QVTKOpenGLNativeWidget.h>
 #include <QtGlobal>
 #include <qloggingcategory.h>
 #include <qmainwindow.h>
 #include <vtkAutoInit.h>
-#include <vtkGaussianSplatter.h>
 #include <vtkInteractionStyleModule.h>
 #include <vtkOutputWindow.h>
-#include <vtkRenderingOpenGL2Module.h>
-#include <vtkRenderingVolumeOpenGL2Module.h>
 #include <vtkType.h>
 #include "Logger/Logger.h"
 #include "UI/Home/MainWindow.h"
@@ -41,7 +37,7 @@ int main(int argc, char* argv[]) {
     }
     // --------------------------------------------
 
-    QSurfaceFormat::setDefaultFormat(QVTKOpenGLNativeWidget::defaultFormat());
+    // QSurfaceFormat::setDefaultFormat(QVTKOpenGLNativeWidget::defaultFormat());
     QSurfaceFormat fmt = QSurfaceFormat::defaultFormat();
 
     fmt.setAlphaBufferSize(16);

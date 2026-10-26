@@ -43,6 +43,10 @@ bool ViewManagerSerializer::fromDTO(const Session::ViewManagerDTO& dto, Core::Vi
         }
     }
 
+    if (dto.mainViewId.isNull() && dto.views.isEmpty()) {
+        return allOk;
+    }
+
     if (viewManager->getView(dto.mainViewId)) {
         viewManager->setMainView(dto.mainViewId);
     } else {
