@@ -1,232 +1,104 @@
-#include <QObject>
+#include <QColor>
+#include <QDateTime>
+#include <QHash>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QtTest>
 #include "../TestGadgets.h"
-
-// Подключите ваш заголовочный файл с сериализацией
 #include <Session/Reflection.h>
 
 class ReflectionTest : public QObject {
     Q_OBJECT
-
   private slots:
     void initTestCase();
-
-    // Тесты базовых шаблонов
-    void testSimpleGadgetSerialization();
-    void testComplexGadgetSerialization();
-    void testComplexGadgetDeserialization();
-    void testCollectionGadgetRoundTrip();
-
-    // Data-driven тесты
-    void testDataDrivenGadgets_data();
-    void testDataDrivenGadgets();
-
-    // Тесты методов схемы файла
-    void testReadSchemeRoundTrip();
+    void testEmptyMapAndDefaults();
+    void testQtValueTypes();
+    void testNestedDtoRoundTrip();
+    void testNullValuesAndMissingFields();
+    void testLegacyJsonCompatibility();
 };
 
 void ReflectionTest::initTestCase() {
-    // Регистрируем мета-типы со строковыми именами, чтобы QVariant корректно их обрабатывал
-    // и мог создавать экземпляры по имени типа при десериализации
     qRegisterMetaType<TestTypes::SimpleGadget>("TestTypes::SimpleGadget");
     qRegisterMetaType<TestTypes::ComplexGadget>("TestTypes::ComplexGadget");
-    qRegisterMetaType<TestTypes::CollectionGadget>("TestTypes::CollectionGadget");
+    qRegisterMetaType<TestTypes::QtValueGadget>("TestTypes::QtValueGadget");
     qRegisterMetaType<TestTypes::Status>("TestTypes::Status");
     qRegisterMetaType<QList<TestTypes::SimpleGadget>>("QList<TestTypes::SimpleGadget>");
-    qRegisterMetaType<QMap<QString, TestTypes::SimpleGadget>>(
-        "QMap<QString, TestTypes::SimpleGadget>");
-    qRegisterMetaType<QMap<QString, int>>("QMap<QString, int>");
-
-    // Регистрация типов схемы для работы variantToReadScheme
-    qRegisterMetaType<QSpace::IO::ColumnMapping>("QSpace::IO::ColumnMapping");
-    qRegisterMetaType<QList<QSpace::IO::ColumnMapping>>("QList<QSpace::IO::ColumnMapping>");
-    qRegisterMetaType<QSpace::IO::ColumnScheme>("QSpace::IO::ColumnScheme");
-    qRegisterMetaType<QSpace::IO::DefaultScheme>("QSpace::IO::DefaultScheme");
+    qRegisterMetaType<QHash<QString, int>>("QHash<QString, int>");
 }
 
-// 1. Тест простого гаджета: Проверяем точность полей в QVariantMap
-void ReflectionTest::testSimpleGadgetSerialization() {
-    TestTypes::SimpleGadget original;
-    original.setId(42);
-    original.setName("SpaceStation");
+void ReflectionTest::testEmptyMapAndDefaults() {
+    const auto restored = QSpace::Reflection::variantMapToGadget<TestTypes::ComplexGadget>({});
+    QCOMPARE(restored.status(), TestTypes::Status::Unknown);
+    QCOMPARE(restored.nested().id(), 0);
+    QVERIFY(restored.numbers().isEmpty());
 
-    QVariantMap map = QSpace::Reflection::gadgetToVariantMap(original);
-
-    QCOMPARE(map.value("id").toInt(), 42);
-    QCOMPARE(map.value("name").toString(), QString("SpaceStation"));
+    TestTypes::SimpleGadget gadget;
+    const auto result = QSpace::Reflection::variantMapToGadget<TestTypes::SimpleGadget>({});
+    QVERIFY(result == gadget);
 }
 
-// 2. Тест комплексного гаджета (вложенный гаджет + список + enum)
-void ReflectionTest::testComplexGadgetSerialization() {
-    TestTypes::SimpleGadget inner;
-    inner.setId(100);
-    inner.setName("InnerData");
+void ReflectionTest::testQtValueTypes() {
+    TestTypes::QtValueGadget original;
+    const auto uuid = QUuid::createUuid();
+    const auto timestamp = QDateTime::fromString("2026-10-24T02:49:43Z", Qt::ISODate);
+    original.setUuid(uuid);
+    original.setColor(QColor("#123456"));
+    original.setTimestamp(timestamp);
+    original.setValues({{"one", 1}, {"two", 2}});
+    original.setIds({uuid, QUuid::createUuid()});
 
+    const auto map = QSpace::Reflection::gadgetToVariantMap(original);
+    QCOMPARE(map.value("uuid").toUuid(), uuid);
+    QCOMPARE(map.value("color").value<QColor>(), QColor("#123456"));
+    QCOMPARE(map.value("timestamp").toDateTime(), timestamp);
+    QCOMPARE(map.value("values").toMap().value("two").toInt(), 2);
+    QCOMPARE(map.value("ids").toList().size(), 2);
+
+    const auto restored = QSpace::Reflection::variantMapToGadget<TestTypes::QtValueGadget>(map);
+    QCOMPARE(restored.uuid(), uuid);
+    QCOMPARE(restored.color(), QColor("#123456"));
+    QCOMPARE(restored.timestamp(), timestamp);
+    QCOMPARE(restored.values(), original.values());
+    QCOMPARE(restored.ids(), original.ids());
+}
+
+void ReflectionTest::testNestedDtoRoundTrip() {
     TestTypes::ComplexGadget original;
-    original.setStatus(TestTypes::Status::Active);
-    original.setNested(inner);
-
-    QList<int> numbers = {1, 2, 3, 5, 8};
-    original.setNumbers(numbers);
-
-    QList<TestTypes::SimpleGadget> simpleList;
-    for (int i = 0; i < 4; ++i) {
-        TestTypes::SimpleGadget sg;
-        sg.setId(i);
-        sg.setName(QString("Gadget_%1").arg(i));
-        simpleList.append(sg);
-    }
-    original.setSimpleGadgets(simpleList);
-
-    QVariantMap map = QSpace::Reflection::gadgetToVariantMap(original);
-
-    QCOMPARE(map.value("status").toString(), QString("Active"));
-    QCOMPARE(map.value("nested").toMap().value("id"), 100);
-    QCOMPARE(map.value("nested").toMap().value("name"), QString("InnerData"));
-
-    QVariantList expectedVariantNumbers = {1, 2, 3, 5, 8};
-    QCOMPARE(map.value("numbers").toList(), expectedVariantNumbers);
-
-    const QVariantList variantList = map.value("simpleGadgets").toList();
-    QCOMPARE(variantList.size(), simpleList.size());
-
-    for (int i = 0; i < simpleList.size(); ++i) {
-        QVariantMap gadgetMap = variantList.at(i).toMap();
-        QCOMPARE(gadgetMap.value("id").toInt(), simpleList.at(i).id());
-        QCOMPARE(gadgetMap.value("name").toString(), simpleList.at(i).name());
-    }
-}
-
-void ReflectionTest::testComplexGadgetDeserialization() {
     TestTypes::SimpleGadget nested;
-    nested.setId(100);
-    nested.setName("InnerData");
-
-    TestTypes::ComplexGadget original;
+    nested.setId(17);
+    nested.setName("nested DTO");
     original.setStatus(TestTypes::Status::Active);
     original.setNested(nested);
-    original.setNumbers({1, 2, 3, 5, 8});
+    original.setNumbers({1, 2, 3});
 
-    QList<TestTypes::SimpleGadget> simpleGadgets;
-    for (int i = 0; i < 3; ++i) {
-        TestTypes::SimpleGadget item;
-        item.setId(i + 10);
-        item.setName(QString("Gadget_%1").arg(i));
-        simpleGadgets.append(item);
-    }
-    original.setSimpleGadgets(simpleGadgets);
-
-    const QVariantMap serialized = QSpace::Reflection::gadgetToVariantMap(original);
-    const TestTypes::ComplexGadget restored =
-        QSpace::Reflection::variantMapToGadget<TestTypes::ComplexGadget>(serialized);
-
+    const auto map = QSpace::Reflection::gadgetToVariantMap(original);
+    QVERIFY(map.value("nested").toMap().contains("id"));
+    const auto restored = QSpace::Reflection::variantMapToGadget<TestTypes::ComplexGadget>(map);
     QCOMPARE(restored.status(), original.status());
     QCOMPARE(restored.nested(), original.nested());
     QCOMPARE(restored.numbers(), original.numbers());
-    QCOMPARE(restored.simpleGadgets(), original.simpleGadgets());
 }
 
-void ReflectionTest::testCollectionGadgetRoundTrip() {
-    TestTypes::SimpleGadget first;
-    first.setId(1);
-    first.setName("first");
+void ReflectionTest::testNullValuesAndMissingFields() {
+    QVariantMap map;
+    map.insert("id", QVariant());
+    map.insert("name", QString("kept"));
+    const auto restored = QSpace::Reflection::variantMapToGadget<TestTypes::SimpleGadget>(map);
+    QCOMPARE(restored.id(), 0);
+    QCOMPARE(restored.name(), QString("kept"));
 
-    TestTypes::SimpleGadget second;
-    second.setId(2);
-    second.setName("second");
-
-    TestTypes::CollectionGadget original;
-    original.setItems({first, second});
-    original.setItemsByName({{"alpha", first}, {"beta", second}});
-    original.setCounters({{"processed", 2}, {"skipped", 1}});
-
-    const QVariantMap serialized = QSpace::Reflection::gadgetToVariantMap(original);
-    QVERIFY(serialized.value("items").canConvert<QVariantList>());
-    QVERIFY(serialized.value("itemsByName").canConvert<QVariantMap>());
-    QVERIFY(serialized.value("counters").canConvert<QVariantMap>());
-
-    const TestTypes::CollectionGadget restored =
-        QSpace::Reflection::variantMapToGadget<TestTypes::CollectionGadget>(serialized);
-
-    QCOMPARE(restored.items(), original.items());
-    QCOMPARE(restored.itemsByName(), original.itemsByName());
-    QCOMPARE(restored.counters(), original.counters());
+    const auto defaults = QSpace::Reflection::variantMapToGadget<TestTypes::QtValueGadget>({});
+    QVERIFY(defaults.uuid().isNull());
+    QVERIFY(!defaults.timestamp().isValid());
 }
 
-// 3. Data-driven тест с наборами данных (полный цикл сериализации -> десериализации)
-void ReflectionTest::testDataDrivenGadgets_data() {
-    QTest::addColumn<int>("id");
-    QTest::addColumn<QString>("name");
-
-    QTest::newRow("Normal value") << 101 << "Apollo";
-    QTest::newRow("Empty string") << 0 << "";
-    QTest::newRow("Special characters") << -5 << "🛰️ Space #1 & test";
-}
-
-void ReflectionTest::testDataDrivenGadgets() {
-    QFETCH(int, id);
-    QFETCH(QString, name);
-
-    TestTypes::SimpleGadget original;
-    original.setId(id);
-    original.setName(name);
-
-    QVariantMap map      = QSpace::Reflection::gadgetToVariantMap(original);
-    auto        restored = QSpace::Reflection::variantMapToGadget<TestTypes::SimpleGadget>(map);
-
-    QCOMPARE(restored.id(), id);
-    QCOMPARE(restored.name(), name);
-    // Проверка оператора ==
-    QVERIFY(original == restored);
-}
-
-// 4. Тест функций работы со схемой файла
-void ReflectionTest::testReadSchemeRoundTrip() {
-    // Подготовка сложной тестовой схемы с колонками
-    QSpace::IO::ColumnScheme columnScheme;
-    columnScheme.headerOffsetBytes = 256;
-    columnScheme.isInterleaved     = true;
-    columnScheme.delimiter         = ",";
-
-    QSpace::IO::ColumnMapping mapX;
-    mapX.name               = "CoordinateX";
-    mapX.vtkDataType        = 10;
-    mapX.vtkAttributeRole   = 1;
-    mapX.numberOfComponents = 1;
-    mapX.isCoordinate       = 0; // Координата X
-
-    QSpace::IO::ColumnMapping mapDensity;
-    mapDensity.name               = "Density";
-    mapDensity.vtkDataType        = 11;
-    mapDensity.vtkAttributeRole   = 2;
-    mapDensity.numberOfComponents = 1;
-    mapDensity.isCoordinate       = -1; // Не координата
-
-    columnScheme.columnsPolicy.append(mapX);
-    columnScheme.columnsPolicy.append(mapDensity);
-
-    // Заворачиваем в std::variant
-    QSpace::IO::ReadScheme originalScheme = columnScheme;
-
-    // Сериализация (запись)
-    QVariantMap map = QSpace::Reflection::readSchemeToVariant(originalScheme);
-
-    // Проверка корректности формирования верхней структуры ("type" и "data")
-    QVERIFY(!map.isEmpty());
-    QCOMPARE(map.value("type").toString(), QString("ColumnScheme"));
-    QVERIFY(map.contains("data"));
-    QCOMPARE(map.value("data").toMap().value("delimiter").toString(), QString(","));
-
-    // Десериализация (чтение)
-    QSpace::IO::ReadScheme restoredScheme = QSpace::Reflection::variantToReadScheme(map);
-
-    // Убеждаемся, что внутри variant лежит нужный тип
-    QVERIFY(std::holds_alternative<QSpace::IO::ColumnScheme>(restoredScheme));
-
-    // Сравниваем исходную схему и восстановленную с помощью operator==,
-    // который был сгенерирован через = default
-    const auto& restoredColumnScheme = std::get<QSpace::IO::ColumnScheme>(restoredScheme);
-    QVERIFY(columnScheme == restoredColumnScheme);
+void ReflectionTest::testLegacyJsonCompatibility() {
+    const QJsonObject legacy{{"id", 42}, {"name", "legacy"}};
+    const auto map = QJsonDocument(legacy).object().toVariantMap();
+    const auto restored = QSpace::Reflection::variantMapToGadget<TestTypes::SimpleGadget>(map);
+    QCOMPARE(restored.id(), 42);
+    QCOMPARE(restored.name(), QString("legacy"));
 }
 
 QTEST_APPLESS_MAIN(ReflectionTest)

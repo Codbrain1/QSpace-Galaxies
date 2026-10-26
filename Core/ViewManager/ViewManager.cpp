@@ -42,6 +42,9 @@ bool ViewManager::addView(std::shared_ptr<Visualize::Views::AbstractView> view) 
     }
     const auto id   = view->id();
     const auto type = view->viewType();
+    if (id.isNull() || m_views.contains(id)) {
+        return false;
+    }
 
     connect(view.get(), &Visualize::Views::AbstractView::updateRequested, this, [this, id]() {
         emit viewUpdateRequested(id); // Адресное уведомление!

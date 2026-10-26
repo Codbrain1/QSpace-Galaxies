@@ -15,20 +15,22 @@ LayerManager::LayerManager(QObject* parent) : QObject(parent) {
 
 LayerManager::~LayerManager() = default;
 
-QUuid LayerManager::createLayer(std::shared_ptr<DataNode> node, std::shared_ptr<Visualize::Views::AbstractView> view) {
+QUuid LayerManager::createLayer(std::shared_ptr<DataNode> node,
+                                std::shared_ptr<Visualize::Views::AbstractView> view) {
+    return createLayer(std::move(node), std::move(view),
+                       Visualize::Layers::RenderLayerType::SPH);
+}
+
+QUuid LayerManager::createLayer(std::shared_ptr<DataNode> node,
+                                std::shared_ptr<Visualize::Views::AbstractView> view,
+                                Visualize::Layers::RenderLayerType renderType) {
     if (!node || !view || !node->isLoaded()) {
         qCWarning(LogCore) << "LayerManager::createLayer - Invalid node or view";
         return QUuid();
     }
 
-    // 1. Создаем обертку
     auto layer = std::make_shared<Visualize::Layers::Layer>(node, view);
-
-    // 2. Создаем движок через фабрику
-    auto renderEngine = Visualize::Layers::LayerFactory::createLayerRenderer(
-        node,
-        Visualize::Layers::RenderLayerType::SPH); // CRITICAL добавить возможность создания
-                                                  // разных типов слоев
+    auto renderEngine = Visualize::Layers::LayerFactory::createLayerRenderer(node, renderType);
     if (!renderEngine)
         return QUuid();
 

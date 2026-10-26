@@ -178,8 +178,8 @@ ReadResult BINReader::read(const QString& path, const ReadScheme& scheme) const 
 
     // проверка размера файла
     qint64 expectedDataSize = static_cast<qint64>(context.N) * particleSize;
-    if (file.size() - context.dataStartPos < expectedDataSize) {
-        qCCritical(LogIO) << "File size less expected for " << context.N << " particles";
+    if (file.size() - context.dataStartPos != expectedDataSize) {
+        qCCritical(LogIO) << "File size differs from expected for " << context.N << " particles";
         return {nullptr,
                 path,
                 "Error file size:" + path,
@@ -246,6 +246,7 @@ ReadResult BINReader::read(const QString& path, const ReadScheme& scheme) const 
     res.path       = path;
     res.errMessage = "";
     res.timestamp  = timestamp;
+    res.pointCount = N;
     res.status     = ReadStatus::Succes;
     res.format     = FileFormat::BIN;
     res.scheme     = scheme;
@@ -258,7 +259,13 @@ bool BINReader::validate(const QFile& file, const ReadScheme& scheme) const {
         return false;
     }
     const auto& config = std::get<ColumnScheme>(scheme);
+    bool hasCoordinates = false;
     for (const auto& col : config.columnsPolicy) {
+        if (col.isCoordinate) {
+            if (hasCoordinates || col.numberOfComponents != 3)
+                return false;
+            hasCoordinates = true;
+        }
         if (col.vtkDataType != VTK_DOUBLE && col.vtkDataType != VTK_FLOAT &&
             col.vtkDataType != VTK_INT) {
             qCCritical(LogIO) << "Unsuported type in column: " << col.name;
@@ -273,7 +280,7 @@ bool BINReader::validate(const QFile& file, const ReadScheme& scheme) const {
             return false;
         }
     }
-    return true;
+    return hasCoordinates;
 }
 
 bool BINReader::prepareVTK(BINReader::ReadContext& context) const {

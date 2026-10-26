@@ -39,7 +39,24 @@ QVariantMap AbstractView3D::getSettingsToVariantMap() const {
 }
 
 bool AbstractView3D::setSettingsFromVariantMap(const QVariantMap& settings) {
-    return false;
+    if (!m_settings)
+        return false;
+
+    bool applied = false;
+    if (const auto grid = m_settings->grid(); settings.contains(QStringLiteral("grid")) && grid) {
+        const auto result = Reflection::variantMapToQObject(settings.value(QStringLiteral("grid")).toMap(), grid);
+        applied |= result.success;
+    }
+    if (const auto axis = m_settings->axis(); settings.contains(QStringLiteral("axis")) && axis) {
+        const auto result = Reflection::variantMapToQObject(settings.value(QStringLiteral("axis")).toMap(), axis);
+        applied |= result.success;
+    }
+    if (const auto viewport = m_settings->viewport(); settings.contains(QStringLiteral("viewport")) && viewport) {
+        const auto result =
+            Reflection::variantMapToQObject(settings.value(QStringLiteral("viewport")).toMap(), viewport);
+        applied |= result.success;
+    }
+    return applied;
 }
 
 } // namespace QSpace::Visualize::Views

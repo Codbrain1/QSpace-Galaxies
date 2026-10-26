@@ -5,6 +5,7 @@
 #include "Core/ObjectRegistry/ObjectRegistry.h"
 #include <qloggingcategory.h>
 #include <QSet>
+#include <algorithm>
 #include "Structures/ObjectRegistryStructures.h"
 #include <memory>
 #include <optional>
@@ -40,6 +41,35 @@ bool ObjectRegistrySerializer::fromDTO(const Session::ObjectRegistryDTO& dto, Co
         qCCritical(LogCore) << "ObjectRegistry is null";
         return false;
     }
+
+    const auto hasUniqueIds = [](const auto& items) {
+        QSet<QUuid> ids;
+        for (const auto& item : items) {
+            if (item.id.isNull() || ids.contains(item.id))
+                return false;
+            ids.insert(item.id);
+        }
+        return true;
+    };
+    if (!hasUniqueIds(dto.experiments) || !hasUniqueIds(dto.snapshots) || !hasUniqueIds(dto.nodes))
+        return false;
+
+    const auto containsId = [](const auto& items, const QUuid& id) {
+        return std::any_of(items.cbegin(), items.cend(), [&](const auto& item) { return item.id == id; });
+    };
+    for (const auto& experiment : dto.experiments) {
+        for (const auto& snapshotId : experiment.snapshots) {
+            if (!containsId(dto.snapshots, snapshotId))
+                return false;
+        }
+    }
+    for (const auto& snapshot : dto.snapshots) {
+        for (const auto& nodeId : snapshot.nodes) {
+            if (!containsId(dto.nodes, nodeId))
+                return false;
+        }
+    }
+
     registry->clear();
 
     QMap<QUuid, std::shared_ptr<Core::DataNode>> nodesMap;

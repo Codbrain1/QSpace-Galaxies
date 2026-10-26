@@ -12,7 +12,10 @@ set(CMAKE_CXX_STANDARD 20) # стандарт языка 23
 set(CMAKE_CXX_STANDARD_REQUIRED ON)#обязательный стандарт языка
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 option(ENABLE_TESTS "Build Tests" ON) #опция переключения между тестами
+<<<<<<< HEAD
 option(ENABLE_COVERAGE "Enable code coverage instrumentation" OFF)
+=======
+>>>>>>> ef59b596219867e5022f7506d049c6d2abb6576c
 
 if(ENABLE_COVERAGE AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     add_compile_options(--coverage -O0 -g)

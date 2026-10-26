@@ -1,1 +1,2 @@
 qspace_add_test(TestLayerManagerSerializer QSpace::CoreLayerManager)
+qspace_add_test(TestViewLayerLifecycle QSpace::CoreLayerManager QSpace::CoreViewManager)
