@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.16) #минимальная версия cmake
+cmake_minimum_required(VERSION 3.30) #минимальная версия cmake
 
 # 1. основные сведедения о проекте
 #-------------------------------------------------------------------
@@ -8,9 +8,11 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     add_compile_options(-fcolor-diagnostics)
 endif()
-set(CMAKE_CXX_STANDARD 20) # стандарт языка 23
+set(CMAKE_CXX_STANDARD 23) # стандарт языка 23
 set(CMAKE_CXX_STANDARD_REQUIRED ON)#обязательный стандарт языка
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(CMAKE_CXX_EXTENSIONS OFF) #отключение расширений компилятора
+
 option(ENABLE_TESTS "Build Tests" ON) #опция переключения между тестами
 
 option(ENABLE_COVERAGE "Enable code coverage instrumentation" OFF)

@@ -5,7 +5,6 @@
 #include <qtmetamacros.h>
 #include <quuid.h>
 #include <vtkRenderWindow.h>
-#include "DataController.h"
 #include "Models/DataTreeModel/DataTreeModel.h"
 #include "ProjectController.h"
 #include "Structures/SessionStructures.h"
@@ -22,7 +21,6 @@ class ViewManager;
 class LayerManager;
 class SessionManager;
 class FileSchemeRegistry;
-// class VideoExportManager;
 } // namespace QSpace::Core
 
 namespace QSpace::Models {
@@ -32,9 +30,11 @@ class DataTreeModel;
 // Forward declarations Контроллеров
 namespace QSpace::Core::Controllers {
 class ViewController;
-class DataController;
 class ProjectController;
 class VideoController;
+class ImportController;
+class LayerController;
+class ExperimentController;
 } // namespace QSpace::Core::Controllers
 
 namespace QSpace::Core {
@@ -55,26 +55,30 @@ class AppCore : public QObject {
     // @SECTION: модели данных
     // ---------------------------------------------------------
     Models::DataTreeModel* dataTreeModel() const;
+    DataManager*            dataManager() const;
 
     // ---------------------------------------------------------
     // @SECTION: контроллеры
     // ---------------------------------------------------------
 
     Controllers::ViewController*    viewController() const;
-    Controllers::DataController*    dataController() const;
-    Controllers::ProjectController* projectController() const;
+    Controllers::ImportController*  importController() const;
+    Controllers::LayerController*      layerController() const;
+    Controllers::ExperimentController* experimentController() const;
+    Controllers::ProjectController*    projectController() const;
     Controllers::VideoController*   videoController() const;
 
   private:
     // контроллеры управляющие разными областями программы (менеджерами)
     std::unique_ptr<Controllers::ViewController>    m_viewController;
-    std::unique_ptr<Controllers::DataController>    m_dataController;
-    std::unique_ptr<Controllers::ProjectController> m_projectController;
+    std::unique_ptr<Controllers::ImportController>  m_importController;
+    std::unique_ptr<Controllers::LayerController>      m_layerController;
+    std::unique_ptr<Controllers::ExperimentController> m_experimentController;
+    std::unique_ptr<Controllers::ProjectController>    m_projectController;
     std::unique_ptr<Controllers::VideoController>   m_videoController;
 
     // менеджеры отвечающие за отдельные части системы
-    std::unique_ptr<TaskManager> m_taskManager;
-    // std::shared_ptr<VideoExportManager> m_videoExportManager;
+    std::unique_ptr<TaskManager>        m_taskManager;
     std::unique_ptr<ObjectRegistry>     m_objectRegistry;
     std::unique_ptr<DataManager>        m_dataManager;
     std::unique_ptr<ViewManager>        m_viewManager;

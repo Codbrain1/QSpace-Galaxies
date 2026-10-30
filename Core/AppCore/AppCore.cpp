@@ -17,7 +17,9 @@
 #include <qloggingcategory.h>
 #include <qnamespace.h>
 #include <quuid.h>
-#include "DataController.h"
+#include "ImportController.h"
+#include "LayerController.h"
+#include "ExperimentController.h"
 #include "Models/DataTreeModel/DataTreeModel.h"
 #include "ProjectController.h"
 #include "VideoController.h"
@@ -41,16 +43,20 @@ AppCore::AppCore(QObject* parent) : QObject(parent) {
                                                                      m_layerManager.get(),
                                                                      m_objectRegistry.get());
 
-    m_dataController = std::make_unique<Controllers::DataController>(m_dataManager.get(),
-                                                                     m_objectRegistry.get(),
-                                                                     m_layerManager.get(),
-                                                                     m_viewManager.get(),
-                                                                     m_fileSchemeRegistry.get());
+    m_importController = std::make_unique<Controllers::ImportController>(m_dataManager.get(),
+                                                                          m_objectRegistry.get(),
+                                                                          m_fileSchemeRegistry.get());
+    m_layerController  = std::make_unique<Controllers::LayerController>(m_objectRegistry.get(),
+                                                                       m_layerManager.get(),
+                                                                       m_viewManager.get());
+    m_experimentController = std::make_unique<Controllers::ExperimentController>(
+        m_objectRegistry.get(), m_layerManager.get(), m_viewManager.get());
 
-    m_projectController = std::make_unique<Controllers::ProjectController>(m_sessionManager.get(),
-                                                                           m_objectRegistry.get(),
-                                                                           m_dataManager.get(),
-                                                                           m_dataController.get());
+    m_projectController =
+        std::make_unique<Controllers::ProjectController>(m_sessionManager.get(),
+                                                         m_objectRegistry.get(),
+                                                         m_dataManager.get(),
+                                                         m_importController.get());
 
     m_videoController = std::make_unique<Controllers::VideoController>(m_objectRegistry.get(),
                                                                        m_viewManager.get(),
@@ -64,21 +70,38 @@ AppCore::~AppCore() = default;
 
 void AppCore::initialize() {
     m_viewController->initialize();
-    m_dataController->initialize();
+    m_importController->initialize();
     m_projectController->initialize();
-    m_videoController->initialize();
-    connect(m_videoController.get(),
-            &Controllers::VideoController::requestNodeLoad,
-            m_dataController.get(),
-            &Controllers::DataController::onRequestDataLoad,
-            Qt::QueuedConnection);
-    connect(m_dataController.get(),
-            &Controllers::DataController::sceneUpdateRequested,
+    connect(m_importController.get(),
+            &Controllers::ImportController::nodeImported,
+            m_layerController.get(),
+            &Controllers::LayerController::createDefaultLayers);
+    connect(m_importController.get(),
+            &Controllers::ImportController::nodeDataLoaded,
+            m_layerController.get(),
+            &Controllers::LayerController::onNodeDataLoaded);
+    connect(m_experimentController.get(),
+            &Controllers::ExperimentController::markSessionDirty,
+            m_importController.get(),
+            &Controllers::ImportController::markSessionDirty);
+    connect(m_layerController.get(),
+            &Controllers::LayerController::sceneUpdateRequested,
             m_viewController.get(),
             &Controllers::ViewController::sceneUpdateRequested,
             Qt::QueuedConnection);
-    connect(m_dataController.get(),
-            &Controllers::DataController::nodeDataLoaded,
+    connect(m_layerController.get(),
+            &Controllers::LayerController::markSessionDirty,
+            m_importController.get(),
+            &Controllers::ImportController::markSessionDirty);
+
+    m_videoController->initialize();
+    connect(m_videoController.get(),
+            &Controllers::VideoController::requestNodeLoad,
+            m_importController.get(),
+            &Controllers::ImportController::onRequestDataLoad,
+            Qt::QueuedConnection);
+    connect(m_importController.get(),
+            &Controllers::ImportController::nodeDataLoaded,
             m_videoController.get(),
             &Controllers::VideoController::handleNodeDataLoaded,
             Qt::QueuedConnection);
@@ -91,8 +114,16 @@ Controllers::ViewController* AppCore::viewController() const {
     return m_viewController.get();
 }
 
-Controllers::DataController* AppCore::dataController() const {
-    return m_dataController.get();
+Controllers::ImportController* AppCore::importController() const {
+    return m_importController.get();
+}
+
+Controllers::LayerController* AppCore::layerController() const {
+    return m_layerController.get();
+}
+
+Controllers::ExperimentController* AppCore::experimentController() const {
+    return m_experimentController.get();
 }
 
 Controllers::ProjectController* AppCore::projectController() const {
@@ -105,6 +136,10 @@ Controllers::VideoController* AppCore::videoController() const {
 
 Models::DataTreeModel* AppCore::dataTreeModel() const {
     return m_dataTreeModel.get();
+}
+
+DataManager* AppCore::dataManager() const {
+    return m_dataManager.get();
 }
 
 } // namespace QSpace::Core

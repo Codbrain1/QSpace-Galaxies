@@ -8,8 +8,18 @@ target_sources(AppCore PRIVATE
             AppCore.cpp
             ViewController.h
             ViewController.cpp
-            DataController.h
-            DataController.cpp
+            ImportController.h
+            ImportController.cpp
+            LayerController.h
+            LayerController.cpp
+            ExperimentController.h
+            ExperimentController.cpp
+            DataCache.h
+            DataCache.cpp
+            ImportFilesWorkflow.h
+            ImportFilesWorkflow.cpp
+            ImportExperimentWorkflow.h
+            ImportExperimentWorkflow.cpp
             ProjectController.h
             ProjectController.cpp
             VideoController.h

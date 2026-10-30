@@ -149,6 +149,22 @@ std::shared_ptr<Experiment> ObjectRegistry::getExperiment(const QUuid& id) const
     return m_experiments.value(id, nullptr);
 }
 
+std::shared_ptr<Experiment> ObjectRegistry::getExperimentForNode(const QUuid& nodeId) const {
+    for (const auto& experiment : m_experiments) {
+        if (!experiment)
+            continue;
+        for (const auto& snapshot : experiment->snapshots) {
+            if (!snapshot)
+                continue;
+            for (const auto& node : snapshot->components) {
+                if (node && node->id == nodeId)
+                    return experiment;
+            }
+        }
+    }
+    return nullptr;
+}
+
 std::shared_ptr<DataNode> ObjectRegistry::getOrLoadNodeData(const QUuid& id) {
     auto node = m_nodes.value(id, nullptr);
     if (!node)

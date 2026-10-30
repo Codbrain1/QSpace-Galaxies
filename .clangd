@@ -1,6 +1,14 @@
 CompileFlags:
+  CompilationDatabase: build
   Add:
-    - -I${workspaceFolder}/src/Enums    
-    - -I${workspaceFolder}/src/Structures
-    - -I${workspaceFolder}/src/Interfaces
-    - -isystemD:/NIR/NIR_6_semestr/vtk/vtk-install-dll/include/vtk-9.5
+    - --target=x86_64-w64-windows-gnu
+    - -isystem
+    - C:/Qt/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include/c++
+    - -isystem
+    - C:/Qt/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include/c++/x86_64-w64-mingw32
+    - -isystem
+    - C:/Qt/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include
+    - -isystem
+    - C:/Qt/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include-fixed
+    - -isystem
+    - C:/Qt/Tools/mingw1310_64/x86_64-w64-mingw32/include

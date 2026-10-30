@@ -154,8 +154,7 @@ QVector<AxisTick> AxisRenderer::buildTicks(AxisSettings* settings, float extent)
 
     const int   n           = std::max(1, settings->tickCount());
     const float step        = extent / float(n);
-    auto        pu          = QSpace::Physics::PhysicalUnits::fromSimParams(3.72, 0.9);
-    float       lengthScale = static_cast<float>(pu.lengthScale);
+    const float lengthScale = static_cast<float>(settings->lengthScale());
 
     if (settings->showLabels()) {
         ticks.append({QVector3D(extent + step, 0, 0), settings->labelX(), settings->colorX()});

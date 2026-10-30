@@ -3,7 +3,8 @@
 #include "ColorMapEditorDialog.h"
 #include "Common/Enums/LayerEnums.h"
 #include "Core/AppCore/AppCore.h"
-#include "Core/AppCore/DataController.h"
+#include "Core/AppCore/ImportController.h"
+#include "Core/AppCore/LayerController.h"
 #include "Core/AppCore/ProjectController.h"
 #include "SettingsEditorWidget.h"
 #include "Structures/ColormapPresets.h"
@@ -107,7 +108,7 @@ void PropertyInspector::handleColorMapAdded(const Visualize::ColorMap& map) {
     ui->combo_colormap->setCurrentIndex(ui->combo_colormap->count() - 1);
     // 7. Обновляем ядро и рендер
     auto colorMapId = map.id;
-    auto layer      = m_app->dataController()->getLayerById(m_currentElementId);
+    auto layer      = m_app->layerController()->getLayerById(m_currentElementId);
     layer->getSettings()->setColorMapId(colorMapId);
 }
 void PropertyInspector::handleCreateCustomPalete() {
@@ -115,7 +116,7 @@ void PropertyInspector::handleCreateCustomPalete() {
         return;
 
     // 1. Берем текущую палитру как базовую (чтобы было что редактировать)
-    auto layer      = m_app->dataController()->getLayerById(m_currentElementId);
+    auto layer      = m_app->layerController()->getLayerById(m_currentElementId);
     auto paleteId   = layer->getSettings()->colorMapId();
     auto baseMapOpt = QSpace::Visualize::ColorMapManager::instance().getMap(paleteId);
     if (!baseMapOpt.has_value()) {
@@ -156,7 +157,7 @@ void PropertyInspector::handleEditPalete() {
     if (m_currentNodeId.isNull())
         return;
 
-    auto layer      = m_app->dataController()->getLayerById(m_currentElementId);
+    auto layer      = m_app->layerController()->getLayerById(m_currentElementId);
     auto nodeId     = layer->getSettings()->colorMapId();
     auto baseMapOpt = QSpace::Visualize::ColorMapManager::instance().getMap(nodeId);
 
@@ -202,7 +203,7 @@ void PropertyInspector::handleCurrentVisualizeColumnChange(int index) {
         return;
 
     QString fieldName = ui->combo_current_column->itemText(index);
-    auto    layer     = m_app->dataController()->getLayerById(m_currentElementId);
+    auto    layer     = m_app->layerController()->getLayerById(m_currentElementId);
     layer->getSettings()->setColorByField(fieldName);
     updateWidgets();
 }
@@ -216,7 +217,7 @@ void PropertyInspector::setCurrentElement(const QUuid& id, Models::DataTreeItem:
         return;
     }
     // Сюда доходим только если выбран корректный слой
-    auto layer = m_app->dataController()->getLayerById(id);
+    auto layer = m_app->layerController()->getLayerById(id);
     if (layer) {
         m_currentElementId = layer->layerId();
         m_currentNodeId    = layer->dataNodeId();
@@ -225,8 +226,8 @@ void PropertyInspector::setCurrentElement(const QUuid& id, Models::DataTreeItem:
     updateWidgets();
 }
 void PropertyInspector::updateWidgets() {
-    auto node  = m_app->dataController()->getNodeById(m_currentNodeId);
-    auto layer = m_app->dataController()->getLayerById(m_currentElementId);
+    auto node  = m_app->importController()->getNodeById(m_currentNodeId);
+    auto layer = m_app->layerController()->getLayerById(m_currentElementId);
     if (!node || !layer)
         return;
 
@@ -271,7 +272,7 @@ void PropertyInspector::handlePaletteChange(int index) {
 
     // Достаем тип палитры из выбранного пункта
     auto colorMapId   = ui->combo_colormap->itemData(index).value<QUuid>();
-    auto layer        = m_app->dataController()->getLayerById(m_currentElementId);
+    auto layer        = m_app->layerController()->getLayerById(m_currentElementId);
     auto colorMap_ptr = QSpace::Visualize::ColorMapManager::instance().getMap(colorMapId);
     if (colorMap_ptr.has_value()) {
         ui->colorbarWidget->setColorMap(colorMap_ptr.value());

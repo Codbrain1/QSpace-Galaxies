@@ -165,6 +165,33 @@ class LAYERS_EXPORT LayerSettings : public QObject {
         return m_autoRange;
     }
 
+    double physicalKm() const {
+        return m_physicalKm;
+    }
+
+    double physicalKr() const {
+        return m_physicalKr;
+    }
+
+    double physicalGamma() const {
+        return m_physicalGamma;
+    }
+
+    bool hasPhysicalGamma() const {
+        return m_hasPhysicalGamma;
+    }
+
+    void setPhysicalUnitsParameters(double Km, double Kr, double gamma, bool haveGamma) {
+        if (m_physicalKm != Km || m_physicalKr != Kr || m_physicalGamma != gamma ||
+            m_hasPhysicalGamma != haveGamma) {
+            m_physicalKm       = Km;
+            m_physicalKr       = Kr;
+            m_physicalGamma    = gamma;
+            m_hasPhysicalGamma = haveGamma;
+            emit changed();
+        }
+    }
+
     void setAutoRange(bool a) {
         if (a != m_autoRange) {
             m_autoRange = a;
@@ -292,7 +319,11 @@ class LAYERS_EXPORT LayerSettings : public QObject {
     double    m_baseRangeMax = 100.0; // глобальное максимальное значение
     bool      m_autoRange    = true;  // автоматически ли подбирать диапазон окрашивания частиц
     int       m_zOrder       = 0;
-    BlendMode m_blendMode    = BlendMode::Alpha;
+    BlendMode m_blendMode        = BlendMode::Alpha;
+    double    m_physicalKm       = 3.72;
+    double    m_physicalKr       = 0.9;
+    double    m_physicalGamma    = 5.0 / 3.0;
+    bool      m_hasPhysicalGamma = true;
 };
 
 } // namespace QSpace::Visualize::Layers

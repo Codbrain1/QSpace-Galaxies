@@ -12,7 +12,7 @@
 #include <vtkMultiBlockDataSet.h>
 #include <vtkSmartPointer.h>
 #include "IO/ReadResult.h"
-
+#include "Structures/ObjectRegistryStructures.h"
 
 namespace QSpace::Core {
 class DataManager : public QObject {
@@ -55,13 +55,6 @@ class DataManager : public QObject {
                                        const IO::ReadScheme& scheme,
                                        IO::FileFormat        format,
                                        IO::ImportRole        role = IO::ImportRole::ProjectData);
-    /**
-     * @brief читает данные из нескольких файлов относящихся к одному снимку
-     * могут быть созданы разные ридеры для чтения
-     * Сигнал: snapshotReady(vtkSmartPointer<vtkMultiBlokDataSet> data)
-     */
-    // void importSnapshotAsync(const QList<IO::BatchTask>& tasks, QString& snapShotName);
-
   signals:
     // запущена операция чтения файлов
     void ioStarted(const QUuid& taskId, const QString& description, int total);
@@ -70,6 +63,7 @@ class DataManager : public QObject {
     void ioFinished(const QUuid& taskId, bool succes);
 
     void fileReady(const QUuid& taskId, IO::ReadResult result, IO::ImportRole role);
+    void fileReadFailed(const QUuid& taskId, IO::ReadResult result, IO::ImportRole role);
     // void snapShotReady(vtkSmartPointer<vtkMultiBlockDataSet> data, const QString& name);
 
     void errorOccured(const QString& mes);

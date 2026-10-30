@@ -22,6 +22,8 @@ class MainWindow;
 QT_END_NAMESPACE
 
 namespace QSpace::UI {
+class ToastNotification;
+
 class MainWindow : public QMainWindow {
     Q_OBJECT
   public:
@@ -53,6 +55,7 @@ class MainWindow : public QMainWindow {
     std::unique_ptr<LayerExplorerWidget> m_layerExplorerWidget; //
     std::unique_ptr<PropertyInspector>   m_propertyInspector;   // TODO: изменить название widget
     std::unique_ptr<TimeLineWidget>      m_timeSliderWidget;
+    std::unique_ptr<ToastNotification>   m_toastNotification;
     QComboBox*                           cameraComboBox;
 
     QMap<QUuid, QDockWidget*> m_viewDockWidgets; // для хранения соответствия между viewId и их доками

@@ -38,6 +38,7 @@ class LAYERMANAGER_EXPORT LayerManager : public QObject {
 
     std::shared_ptr<Visualize::Layers::Layer>        getLayer(const QUuid& layerId) const;
     QList<std::shared_ptr<Visualize::Layers::Layer>> getLayersForNode(const QUuid& nodeId) const;
+    void applyPhysicalUnits(const QUuid& nodeId, const PhysicalUnitsProfile& profile);
 
     [[deprecated]]
     void updateNodeMasterSettings(const QUuid& nodeId);

@@ -204,7 +204,10 @@ void SPHRendererLayer::render(QOpenGLFunctions_3_3_Core* gl, const Visualize::Re
 
     // Подтягиваем астрофизический масштаб в зависимости от выбранного слоя визуализации
     // Например, если сейчас рисуется плотность, scaleFactor = l_s. Если температура = l_Te.
-    auto pu = Physics::PhysicalUnits::fromSimParams(3.72, 0.9, 5.0 / 3.0, true);
+    auto pu = Physics::PhysicalUnits::fromSimParams(m_settings->physicalKm(),
+                                                    m_settings->physicalKr(),
+                                                    m_settings->physicalGamma(),
+                                                    m_settings->hasPhysicalGamma());
 
     // =========================================================================
     // ПРОХОД 1: Сплаттинг (Накопление сырых сумм скаляров и количества)

@@ -10,6 +10,7 @@
 #include <vtkMultiBlockDataSet.h>
 #include <vtkSmartPointer.h>
 #include "IO/ReaderFactory.h"
+#include <algorithm>
 #include <memory>
 
 // TODO: добавить возможность отменить чтение через std::function<bool()> isCanceled = []{ return
@@ -35,6 +36,7 @@ QUuid DataManager::importDataAsync(const QString&        path,
                 if (result.isSuccess()) {
                     emit fileReady(taskId, result, role);
                 } else {
+                    emit fileReadFailed(taskId, result, role);
                     emit errorOccured(result.errMessage);
                 }
                 emit ioFinished(taskId, result.isSuccess());
@@ -66,6 +68,12 @@ QUuid DataManager::importDataAsync(const QString&        path,
 
 QUuid DataManager::importBatchDataAsync(const QList<IO::BatchTask>& tasks, IO::ImportRole role) {
     QUuid taskId = QUuid::createUuid();
+    if (tasks.isEmpty()) {
+        emit errorOccured(QString("Tasks list is empty"));
+        emit ioFinished(taskId, false);
+        return taskId;
+    }
+
     emit  ioStarted(taskId, QString("Import Batch"), tasks.size());
     auto* watcher = new QFutureWatcher<IO::ReadResult>(this);
     connect(watcher,
@@ -73,14 +81,26 @@ QUuid DataManager::importBatchDataAsync(const QList<IO::BatchTask>& tasks, IO::I
             this,
             [this, watcher, taskId, role](int index) {
                 IO::ReadResult result = watcher->resultAt(index);
-                if (result.isSuccess())
+                if (result.isSuccess()) {
                     emit fileReady(taskId, result, role);
+                } else {
+                    emit fileReadFailed(taskId, result, role);
+                    emit errorOccured(result.errMessage);
+                }
                 emit progressChanged(taskId, watcher->progressValue(), watcher->progressMaximum());
             });
-    connect(watcher, &QFutureWatcher<IO::ReadResult>::finished, this, [this, watcher, taskId]() {
-        emit ioFinished(taskId, true);
-        watcher->deleteLater();
-    });
+    connect(watcher,
+            &QFutureWatcher<IO::ReadResult>::finished,
+            this,
+            [this, watcher, taskId]() {
+                const auto results = watcher->future().results();
+                const bool success = !results.isEmpty() && std::all_of(
+                    results.cbegin(), results.cend(), [](const IO::ReadResult& result) {
+                        return result.isSuccess();
+                    });
+                emit ioFinished(taskId, success);
+                watcher->deleteLater();
+            });
     auto policy = m_global_policy;
     if (tasks.size() >= 30) {
         policy = IO::FilePolicy::ForceMapped;
@@ -120,36 +140,53 @@ void DataManager::importBatchIdendicalDataAsync(const QStringList&    paths,
         emit errorOccured(QString("Unsupported file format"));
         return;
     }
-    reader->setPolicy(m_global_policy);
     QUuid taskId = QUuid::createUuid();
     emit  ioStarted(taskId, "Import Batch", paths.size());
 
-    auto* readerPtr = reader.release();
-    auto* watcher   = new QFutureWatcher<IO::ReadResult>(this);
+    auto* watcher = new QFutureWatcher<IO::ReadResult>(this);
     connect(watcher,
             &QFutureWatcher<IO::ReadResult>::resultReadyAt,
             this,
             [this, watcher, taskId, role](int index) {
-                auto result = watcher->resultAt(index);
+                IO::ReadResult result = watcher->resultAt(index);
                 if (result.isSuccess()) {
                     emit fileReady(taskId, result, role);
+                } else {
+                    emit fileReadFailed(taskId, result, role);
+                    emit errorOccured(result.errMessage);
                 }
                 emit progressChanged(taskId, watcher->progressValue(), watcher->progressMaximum());
             });
     connect(watcher,
             &QFutureWatcher<IO::ReadResult>::finished,
             this,
-            [this, watcher, taskId, readerPtr]() {
-                bool overAllSuccess = (watcher->progressValue() > 0);
-                delete readerPtr;
-                emit ioFinished(taskId, overAllSuccess);
+            [this, watcher, taskId]() {
+                const auto results = watcher->future().results();
+                const bool success = !results.isEmpty() && std::all_of(
+                    results.cbegin(), results.cend(), [](const IO::ReadResult& result) {
+                        return result.isSuccess();
+                    });
+                emit ioFinished(taskId, success);
                 watcher->deleteLater();
             });
+    const auto policy = m_global_policy;
     watcher->setFuture(
-        m_taskManager->mapIO(paths, [readerPtr, scheme](const QString& path) -> IO::ReadResult {
-            auto res = readerPtr->read(path, scheme);
-            res.path = path;
-            return res;
+        m_taskManager->mapIO(paths, [format, policy, scheme](const QString& path) -> IO::ReadResult {
+            auto reader = IO::createReader(format);
+            if (!reader) {
+                return {nullptr,
+                        path,
+                        "Unsupported file format",
+                        0,
+                        0,
+                        format,
+                        scheme,
+                        IO::ReadStatus::InvalidFormat};
+            }
+            reader->setPolicy(policy);
+            auto result = reader->read(path, scheme);
+            result.path = path;
+            return result;
         }));
 }
 

@@ -61,6 +61,7 @@ class AxisSettings : public QObject {
     Q_PROPERTY(QString labelY        READ labelY        WRITE setLabelY        NOTIFY changed)
     Q_PROPERTY(QString labelZ        READ labelZ        WRITE setLabelZ        NOTIFY changed)
     Q_PROPERTY(QString unitLabel    READ unitLabel     WRITE setUnitLabel     NOTIFY changed)
+    Q_PROPERTY(double lengthScale   READ lengthScale   WRITE setLengthScale   NOTIFY changed)
     Q_PROPERTY(QString labelFontFamily READ labelFontFamily WRITE setLabelFontFamily NOTIFY changed)
     Q_PROPERTY(int     labelFontSize READ labelFontSize WRITE setLabelFontSize NOTIFY changed)
     
@@ -90,6 +91,9 @@ class AxisSettings : public QObject {
     
     QString unitLabel() const { return m_unitLabel; }
     void setUnitLabel(const QString& u) { if (m_unitLabel != u) { m_unitLabel = u; emit changed(); } }
+
+    double lengthScale() const { return m_lengthScale; }
+    void setLengthScale(double value) { if (!qFuzzyCompare(m_lengthScale, value)) { m_lengthScale = value; emit changed(); } }
     
     QString labelX() const {return m_labelX;}
     void setLabelX(const QString& label) { if(m_labelX != label) {m_labelX = label;emit changed();}}
@@ -123,6 +127,7 @@ class AxisSettings : public QObject {
     QString m_labelY          = "Y";                  // подпись оси Y
     QString m_labelZ          = "Z";                  // подпись оси Z
     QString m_unitLabel       = "kpc";                // подпись размерности
+    double  m_lengthScale     = 1.0;
     QString m_labelFontFamily = "Segoe UI";           // тип шрифта
     int     m_labelFontSize   = 10;                   // размер шрифта
 };

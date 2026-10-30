@@ -1,7 +1,8 @@
 #include "MainWindow.h"
 #include "Common/Logger/Logger.h"
 #include "Core/AppCore/AppCore.h"
-#include "Core/AppCore/DataController.h"
+#include "Core/AppCore/ImportController.h"
+#include "Core/DataManager/DataManager.h"
 #include "Core/AppCore/ProjectController.h"
 #include "Core/AppCore/VideoController.h"
 #include "Core/AppCore/ViewController.h"
@@ -12,6 +13,7 @@
 #include "Models/DataTreeModel/DataTreeModel.h"
 #include "PropertyInspector.h"
 #include "TimeLineWidget.h"
+#include "ToastNotification.h"
 #include "ViewContainerWidget.h"
 #include "Visualize/Views/View3D/AbstractView3D.h"
 #include "ui_newmainwindow.h"
@@ -50,6 +52,7 @@ MainWindow::MainWindow(Core::AppCore* app, QWidget* parent)
     : QMainWindow(parent), m_app(app), ui(new Ui::MainWindow) {
     // инициализируем ui файл
     ui->setupUi(this);
+    m_toastNotification = std::make_unique<ToastNotification>(this);
     setDockNestingEnabled(true);
     this->setCentralWidget(nullptr);
 
@@ -197,16 +200,21 @@ void MainWindow::setupSlots() {
             this,
             &MainWindow::handleRenderUpdate,
             Qt::QueuedConnection);
-    connect(m_app->dataController(),
-            &QSpace::Core::Controllers::DataController::sceneUpdateRequested,
-            this,
-            &UI::MainWindow::handleRenderUpdate,
-            Qt::QueuedConnection);
     connect(m_app->dataTreeModel(),
             &QSpace::Models::DataTreeModel::sceneUpdateRequested,
             this,
             &UI::MainWindow::handleRenderUpdate,
             Qt::QueuedConnection);
+    connect(m_app->dataManager(),
+            &QSpace::Core::DataManager::fileReadFailed,
+            this,
+            [this](const QUuid&, const QSpace::IO::ReadResult& result, QSpace::IO::ImportRole) {
+                const QString fileName = QFileInfo(result.path).fileName();
+                m_toastNotification->showError(
+                    tr("Ошибка чтения файла"),
+                    tr("Не удалось прочитать файл \"%1\".\n%2")
+                        .arg(fileName.isEmpty() ? result.path : fileName, result.errMessage));
+            });
     //----- ПОДКЛЮЧЕНИЕ СЛОТОТОВ LayerExplorerWidget -----
 
     // ---- Подключение кнопок QToolBar ----

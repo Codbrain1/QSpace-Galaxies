@@ -103,12 +103,22 @@ class Snapshot {
     }
 };
 
+struct PhysicalUnitsProfile {
+    Q_GADGET
+  public:
+    double Km        = 3.72;
+    double Kr        = 0.9;
+    double gamma     = 5.0 / 3.0;
+    bool   haveGamma = true;
+};
+
 struct Experiment {
     Q_GADGET
   public:
     QUuid                            id;
     QString                          name;
     QList<std::shared_ptr<Snapshot>> snapshots; // Список временных шагов
+    PhysicalUnitsProfile             profile;
 
     Experiment(const QString& expName) : id(QUuid::createUuid()), name(expName) {
     }

@@ -1,5 +1,7 @@
 #include "ViewManager.h"
 #include "Visualize/Views/AbstractView.h"
+#include "Visualize/Views/View3D/AbstractView3D.h"
+#include "Physics/DimensionConverter/PhysicalUnits.h"
 #include "Visualize/Views/ViewFactory.h"
 #include <qobject.h>
 #include <quuid.h>
@@ -23,6 +25,7 @@ QUuid ViewManager::createView(Visualize::Views::ViewType type) {
 
 
     // 4. Перемещаем владение объектом в контейнер менеджера
+    applyActiveExperimentToView(newView);
     m_views.emplace(newView->id(), std::move(newView));
 
     // 5. Устанавливаем главное окно, если оно еще не задано
@@ -50,6 +53,7 @@ bool ViewManager::addView(std::shared_ptr<Visualize::Views::AbstractView> view) 
         emit viewUpdateRequested(id); // Адресное уведомление!
     });
 
+    applyActiveExperimentToView(view);
     m_views.emplace(view->id(), std::move(view));
 
     if (m_mainViewId.isNull()) {
@@ -113,6 +117,7 @@ void ViewManager::clear() {
         removeView(id);
 
     m_mainViewId = QUuid();
+    m_hasActiveExperiment = false;
 }
 
 void ViewManager::updateAllViews() {
@@ -137,5 +142,27 @@ void ViewManager::renderView(const QUuid& id) {
     if (m_views.contains(id)) {
         m_views[id]->render();
     }
+}
+
+void ViewManager::applyActiveExperimentToView(
+    const std::shared_ptr<Visualize::Views::AbstractView>& view) {
+    if (!m_hasActiveExperiment || !view)
+        return;
+    if (auto view3d = std::dynamic_pointer_cast<Visualize::Views::AbstractView3D>(view)) {
+        const auto units = Physics::PhysicalUnits::fromSimParams(
+            m_activeExperimentProfile.Km,
+            m_activeExperimentProfile.Kr,
+            m_activeExperimentProfile.gamma,
+            m_activeExperimentProfile.haveGamma);
+        if (auto settings = view3d->sceneSettings())
+            settings->axis()->setLengthScale(units.lengthScale);
+    }
+}
+
+void ViewManager::setActiveExperiment(const PhysicalUnitsProfile& profile) {
+    m_activeExperimentProfile = profile;
+    m_hasActiveExperiment = true;
+    for (auto& [id, view] : m_views)
+        applyActiveExperimentToView(view);
 }
 } // namespace QSpace::Core

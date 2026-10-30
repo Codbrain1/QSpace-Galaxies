@@ -165,7 +165,7 @@ void ColorBarWidget::handleUpdateValues() {
     } else if (colorByfield == "Density") {
         dimension = "Msun/pc^3";
     } else if (colorByfield == "Energy") {
-        dimension = "K";
+        dimension = m_settings->hasPhysicalGamma() ? "K" : QString();
     } else if (colorByfield == "Velocity") {
         dimension = "km/s";
     }
@@ -183,7 +183,10 @@ void ColorBarWidget::handleUpdateValues() {
         rawMax = m_settings->rangeMax();
     }
 
-    auto   pu          = QSpace::Physics::PhysicalUnits::fromSimParams(3.72, 0.9, 5.0 / 3.0, true);
+    auto pu = QSpace::Physics::PhysicalUnits::fromSimParams(m_settings->physicalKm(),
+                                                            m_settings->physicalKr(),
+                                                            m_settings->physicalGamma(),
+                                                            m_settings->hasPhysicalGamma());
     double scaleFactor = QSpace::Physics::fieldPhysicalScale(pu, m_settings->colorByField());
     rawMin *= scaleFactor;
     rawMax *= scaleFactor;

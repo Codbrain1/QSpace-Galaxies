@@ -1,7 +1,6 @@
 #pragma once
 #include "Common/Enums/IOEnums.h"
 #include "Core/FileSchemeRegistry/FileSchemeRegistry.h"
-#include "Visualize/Layers/Layer.h"
 #include <QMap>
 #include <QObject>
 #include <QSet>
@@ -11,31 +10,34 @@
 #include "IO/ReadResult.h"
 #include "Physics/Math/MetaDataCalculating.h"
 #include "Structures/SessionStructures.h"
+#include <expected>
+#include <memory>
 
 // Forward declarations в пространствах имен проекта
 namespace QSpace::Core {
 class DataManager;
 class ObjectRegistry;
-class LayerManager;
-class ViewManager;
 class DataNode;
 class Snapshot;
 } // namespace QSpace::Core
 
 namespace QSpace::Core::Controllers {
 
+class ImportFilesWorkflow;
+class ImportExperimentWorkflow;
+class DataCache;
+
 // ---------------------------------------------------------
-// @SECTION: загрузка данных
+// @SECTION: импорт и управление данными
 // ---------------------------------------------------------
-class DataController : public QObject {
+class ImportController : public QObject {
     Q_OBJECT
   public:
-    explicit DataController(Core::DataManager*        dataManager,
-                            Core::ObjectRegistry*     objectRegistry,
-                            Core::LayerManager*       layerManager,
-                            Core::ViewManager*        viewManager,
-                            Core::FileSchemeRegistry* fileSchemeRegistry,
-                            QObject*                  parent = nullptr);
+    explicit ImportController(Core::DataManager*        dataManager,
+                              Core::ObjectRegistry*     objectRegistry,
+                              Core::FileSchemeRegistry* fileSchemeRegistry,
+                              QObject*                  parent = nullptr);
+    ~ImportController() override;
 
     void initialize();
 
@@ -48,6 +50,7 @@ class DataController : public QObject {
                      IO::ModelingProgrammVersion version = IO::ModelingProgrammVersion::V2,
                      const QUuid&                targetExperimentId = QUuid());
 
+
     void
     importExperiment(const QString&              experimentPath,
                      IO::ModelingProgrammVersion version = IO::ModelingProgrammVersion::V2); // TODO
@@ -59,60 +62,51 @@ class DataController : public QObject {
     std::optional<QUuid> getExperimentIdByNodePath(const QString& nodePath) const;
     std::optional<QUuid> getNodeIdByFilePath(const QString& filePath) const;
 
-    // --- Управление узлами данных (Nodes) ---
-    void                                      createLayerForNode(const QUuid& nodeId);
-    std::shared_ptr<QSpace::Core::DataNode>   getNodeById(const QUuid& nodeId);
-    std::shared_ptr<Visualize::Layers::Layer> getLayerById(const QUuid& layerId);
+    std::shared_ptr<QSpace::Core::DataNode> getNodeById(const QUuid& nodeId);
 
-    // Метод, который вызовет ProjectController при открытии проекта
+    // Временный API до выделения ProjectRestoreWorkflow.
     void prepareNodesForRestoration(const QMap<QString, Session::DataNodeState>& restoringNodes);
-    // Запускает восстановление тяжёлых данных для узлов, записанных в проекте.
     void loadRestoredNodes();
 
-    QList<std::shared_ptr<QSpace::Core::Experiment>> getExperiments() const;
-
-
   signals:
-    void sceneUpdateRequested();
     void markSessionDirty(); // Сигнал для ProjectController
     void nodeDataLoaded(const QUuid& nodeId);
+    void nodeImported(const QUuid& nodeId);
 
   public slots:
     void removeNodeObject(const QUuid& id);
-    void removeLayer(const QUuid& id);
 
-    // при выборе ноды в плоском режиме
-    void onNodeSelectionActivated(const QUuid& nodeId);
-
+    // Совместимый переходный слот. Фактический lazy-load выполняет DataCache.
     void onRequestDataLoad(const QUuid& nodeId);
 
 
   private slots:
-    void handleFileReady(const QUuid& taskId, IO::ReadResult result);
+    void handleFileReady(const QUuid& taskId, IO::ReadResult result, IO::ImportRole role);
 
   private:
     struct TaskInfo {
-        QUuid targetNodeId;   // Будет пустым для первичного импорта пакета
-        int   totalFiles = 1; // Количество файлов в задаче
+        int totalFiles = 1;
     };
 
     Core::DataManager* m_dataManager;
 
     Core::ObjectRegistry*     m_objectRegistry;
-    Core::LayerManager*       m_layerManager;
-    Core::ViewManager*        m_viewManager;
     Core::FileSchemeRegistry* m_fileSchemeRegistry;
 
     QMap<QUuid, QUuid> m_taskToExperiment;
 
     QMap<QUuid, TaskInfo>                 m_activeTasks;
-    QSet<QUuid>                           m_loadingNodes;
     QMap<QString, Session::DataNodeState> m_restoringNodes;
 
     bool m_autoGrouping = true;
+
+    std::unique_ptr<ImportFilesWorkflow>      m_importFilesWorkflow;
+    std::unique_ptr<ImportExperimentWorkflow> m_importExperimentWorkflow;
+    std::unique_ptr<DataCache>                m_dataCache;
 
     QString                         extractGroupName(const QString& filename);
     std::shared_ptr<Core::Snapshot> findOrCreateSnapshot(const QString& groupName);
     void activateSnapshotInternal(const QUuid& snapshotId, bool isPreview);
 };
+
 } // namespace QSpace::Core::Controllers

@@ -4,6 +4,8 @@ add_library(QSpace::UI ALIAS UI)
 target_sources(UI PRIVATE
     Home/MainWindow.h
     Home/MainWindow.cpp
+    Home/ToastNotification.h
+    Home/ToastNotification.cpp
     Home/newmainwindow.ui
     Home/LayerExplorerWidget.h
     Home/LayerExplorerWidget.cpp

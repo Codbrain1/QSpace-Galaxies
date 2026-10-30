@@ -5,32 +5,29 @@
 #include <QtTest>
 
 #include "Common/Structures/ObjectRegistryStructures.h"
-#include "Core/AppCore/DataController.h"
+#include "Core/AppCore/ImportController.h"
 #include "Core/DataManager/DataManager.h"
 #include "Core/FileSchemeRegistry/FileSchemeRegistry.h"
-#include "Core/LayerManager/LayerManager.h"
 #include "Core/ObjectRegistry/ObjectRegistry.h"
 #include "Core/TaskManager/TaskManager.h"
 
 using namespace QSpace::Core;
 using namespace QSpace::Core::Controllers;
 
-class TestDataController : public QObject {
+class TestImportController : public QObject {
     Q_OBJECT
 
   private slots:
+
     void init() {
         m_taskManager        = std::make_unique<TaskManager>();
         m_dataManager        = std::make_unique<DataManager>(m_taskManager.get());
         m_registry           = std::make_unique<ObjectRegistry>();
-        m_layerManager       = std::make_unique<LayerManager>();
         m_fileSchemeRegistry = std::make_unique<FileSchemeRegistry>();
         m_fileSchemeRegistry->registerStandartPresets();
-        m_controller = std::make_unique<DataController>(m_dataManager.get(),
-                                                        m_registry.get(),
-                                                        m_layerManager.get(),
-                                                        nullptr,
-                                                        m_fileSchemeRegistry.get());
+        m_controller = std::make_unique<ImportController>(m_dataManager.get(),
+                                                          m_registry.get(),
+                                                          m_fileSchemeRegistry.get());
         m_controller->initialize();
     }
 
@@ -45,8 +42,8 @@ class TestDataController : public QObject {
     }
 
     void testFindsExperimentContainingNodePath() {
-        auto node  = std::make_shared<DataNode>(nullptr, "Snapshot node");
-        node->path = "step_001.bin";
+        auto node     = std::make_shared<DataNode>(nullptr, "Snapshot node");
+        node->path    = "step_001.bin";
         auto snapshot = std::make_shared<Snapshot>("Step 1");
         snapshot->addComponent(node);
         auto experiment = std::make_shared<Experiment>("Experiment");
@@ -58,7 +55,7 @@ class TestDataController : public QObject {
         QCOMPARE(m_controller->getExperimentIdByNodePath(node->path),
                  std::optional<QUuid>(experiment->id));
         QVERIFY(!m_controller->getExperimentIdByNodePath("missing.bin").has_value());
-        QCOMPARE(m_controller->getExperiments().size(), 1);
+        QCOMPARE(m_registry->getAllExperiments().size(), 1);
     }
 
     void testCreatesExperimentFromValidRequest() {
@@ -66,7 +63,8 @@ class TestDataController : public QObject {
                                        QStringLiteral("Imported experiment"));
 
         QCOMPARE(m_registry->experimentCount(), 1);
-        QCOMPARE(m_controller->getExperiments().front()->name, QStringLiteral("Imported experiment"));
+        QCOMPARE(m_registry->getAllExperiments().front()->name,
+                 QStringLiteral("Imported experiment"));
     }
 
     void testRejectsInvalidExperimentRequests() {
@@ -81,12 +79,10 @@ class TestDataController : public QObject {
         QVERIFY(directory.isValid());
         const QString path = createGasBin(directory.path() + "/Gas_single.bin", 1.25);
 
-        QSignalSpy dirtySpy(m_controller.get(), &DataController::markSessionDirty);
-        QSignalSpy sceneSpy(m_controller.get(), &DataController::sceneUpdateRequested);
+        QSignalSpy dirtySpy(m_controller.get(), &ImportController::markSessionDirty);
         m_controller->importFiles({path});
 
         QTRY_COMPARE(m_registry->nodeCount(), 1);
-        QTRY_COMPARE(sceneSpy.count(), 1);
         QCOMPARE(dirtySpy.count(), 1);
         auto node = m_registry->getAllNodes().front();
         QCOMPARE(node->path, path);
@@ -105,7 +101,7 @@ class TestDataController : public QObject {
         QTRY_COMPARE(m_registry->nodeCount(), 2);
         QTRY_COMPARE(m_registry->snapshotCount(), 1);
         QCOMPARE(m_registry->experimentCount(), 1);
-        const auto experiment = m_controller->getExperiments().front();
+        const auto experiment = m_registry->getAllExperiments().front();
         QCOMPARE(experiment->name, QStringLiteral("Batch experiment"));
         QCOMPARE(experiment->snapshots.size(), 1);
         QCOMPARE(experiment->snapshots.front()->components.size(), 2);
@@ -113,27 +109,25 @@ class TestDataController : public QObject {
 
     void testRejectsFailedSingleImportWithoutRegisteringNode() {
         QSignalSpy finishedSpy(m_dataManager.get(), &DataManager::ioFinished);
-        QSignalSpy sceneSpy(m_controller.get(), &DataController::sceneUpdateRequested);
         m_controller->importFiles({QStringLiteral("Gas_missing.bin")});
 
         QTRY_COMPARE(finishedSpy.count(), 1);
         QCOMPARE(finishedSpy.front().front().toBool(), false);
         QCOMPARE(m_registry->nodeCount(), 0);
-        QCOMPARE(sceneSpy.count(), 0);
     }
 
     void testLazyLoadsNodeAndPreventsDuplicateRequests() {
         QTemporaryDir directory;
         QVERIFY(directory.isValid());
         const QString path = createGasBin(directory.path() + "/Gas_lazy.bin", 2.5);
-        auto node = std::make_shared<DataNode>(nullptr, "Lazy node");
-        node->path   = path;
-        node->format = QSpace::IO::FileFormat::BIN;
-        node->type   = QSpace::Visualize::EntityType::Gas;
+        auto          node = std::make_shared<DataNode>(nullptr, "Lazy node");
+        node->path         = path;
+        node->format       = QSpace::IO::FileFormat::BIN;
+        node->type         = QSpace::Visualize::EntityType::Gas;
         m_registry->registerNode(node);
 
         QSignalSpy startedSpy(m_dataManager.get(), &DataManager::ioStarted);
-        QSignalSpy loadedSpy(m_controller.get(), &DataController::nodeDataLoaded);
+        QSignalSpy loadedSpy(m_controller.get(), &ImportController::nodeDataLoaded);
         m_controller->onRequestDataLoad(node->id);
         m_controller->onRequestDataLoad(node->id);
 
@@ -144,7 +138,7 @@ class TestDataController : public QObject {
     }
 
     void testLazyLoadFailureReleasesRequestLock() {
-        auto node = std::make_shared<DataNode>(nullptr, "Missing node");
+        auto node    = std::make_shared<DataNode>(nullptr, "Missing node");
         node->path   = QStringLiteral("Gas_missing.bin");
         node->format = QSpace::IO::FileFormat::BIN;
         node->type   = QSpace::Visualize::EntityType::Gas;
@@ -156,10 +150,11 @@ class TestDataController : public QObject {
         const QUuid taskId = startedSpy.front().front().value<QUuid>();
 
         QSpace::IO::ReadResult failedResult;
-        failedResult.path   = node->path;
-        failedResult.status = QSpace::IO::ReadStatus::FileNotFound;
+        failedResult.path       = node->path;
+        failedResult.status     = QSpace::IO::ReadStatus::FileNotFound;
         failedResult.errMessage = QStringLiteral("not found");
         emit m_dataManager->fileReady(taskId, failedResult, QSpace::IO::ImportRole::ProjectData);
+        emit m_dataManager->ioFinished(taskId, false);
 
         m_controller->onRequestDataLoad(node->id);
         QCOMPARE(startedSpy.count(), 2);
@@ -169,7 +164,7 @@ class TestDataController : public QObject {
     void testRemovesNodeAndMarksSessionDirty() {
         auto node = std::make_shared<DataNode>(nullptr, "Node to remove");
         m_registry->registerNode(node);
-        QSignalSpy dirtySpy(m_controller.get(), &DataController::markSessionDirty);
+        QSignalSpy dirtySpy(m_controller.get(), &ImportController::markSessionDirty);
 
         m_controller->removeNodeObject(node->id);
 
@@ -195,10 +190,9 @@ class TestDataController : public QObject {
     std::unique_ptr<TaskManager>        m_taskManager;
     std::unique_ptr<DataManager>        m_dataManager;
     std::unique_ptr<ObjectRegistry>     m_registry;
-    std::unique_ptr<LayerManager>       m_layerManager;
     std::unique_ptr<FileSchemeRegistry> m_fileSchemeRegistry;
-    std::unique_ptr<DataController>     m_controller;
+    std::unique_ptr<ImportController>   m_controller;
 };
 
-QTEST_GUILESS_MAIN(TestDataController)
-#include "TestDataController.moc"
+QTEST_GUILESS_MAIN(TestImportController)
+#include "TestImportController.moc"

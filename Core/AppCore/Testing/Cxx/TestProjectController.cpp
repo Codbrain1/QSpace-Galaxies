@@ -4,7 +4,7 @@
 #include <QTemporaryDir>
 #include <QtTest>
 
-#include "Core/AppCore/DataController.h"
+#include "Core/AppCore/ImportController.h"
 #include "Core/AppCore/ProjectController.h"
 #include "Core/DataManager/DataManager.h"
 #include "Core/FileSchemeRegistry/FileSchemeRegistry.h"
@@ -20,18 +20,24 @@ using namespace QSpace::Core::Controllers;
 class TestProjectController : public QObject {
     Q_OBJECT
   private slots:
+
     void init() {
-        tasks = std::make_unique<TaskManager>();
-        data = std::make_unique<DataManager>(tasks.get());
+        tasks    = std::make_unique<TaskManager>();
+        data     = std::make_unique<DataManager>(tasks.get());
         registry = std::make_unique<ObjectRegistry>();
-        layers = std::make_unique<LayerManager>();
-        views = std::make_unique<ViewManager>();
-        schemes = std::make_unique<FileSchemeRegistry>();
+        layers   = std::make_unique<LayerManager>();
+        views    = std::make_unique<ViewManager>();
+        schemes  = std::make_unique<FileSchemeRegistry>();
         schemes->registerStandartPresets();
-        controller = std::make_unique<DataController>(data.get(), registry.get(), layers.get(), views.get(), schemes.get());
+        controller = std::make_unique<ImportController>(data.get(),
+                                                        registry.get(),
+                                                        schemes.get());
         controller->initialize();
         session = std::make_unique<SessionManager>(registry.get(), layers.get(), views.get());
-        project = std::make_unique<ProjectController>(session.get(), registry.get(), data.get(), controller.get());
+        project = std::make_unique<ProjectController>(session.get(),
+                                                      registry.get(),
+                                                      data.get(),
+                                                      controller.get());
         project->initialize();
     }
 
@@ -57,7 +63,8 @@ class TestProjectController : public QObject {
         project->saveCurrentProjectAs(path);
         QVERIFY(QFile::exists(path));
         QVERIFY(!states.last().at(0).value<QSpace::Session::CurrentSession>().isDirty);
-        QCOMPARE(states.last().at(0).value<QSpace::Session::CurrentSession>().projectFilePath, path);
+        QCOMPARE(states.last().at(0).value<QSpace::Session::CurrentSession>().projectFilePath,
+                 path);
     }
 
     void testOpenFailurePreservesExistingProject() {
@@ -78,45 +85,48 @@ class TestProjectController : public QObject {
         QTemporaryDir dir;
         QVERIFY(dir.isValid());
         const QString binPath = dir.filePath("Gas_restore.bin");
-        QFile file(binPath);
+        QFile         file(binPath);
         QVERIFY(file.open(QIODevice::WriteOnly));
         QDataStream stream(&file);
         stream.setByteOrder(QDataStream::LittleEndian);
         stream << qint32(1) << double(2.5);
-        for (int i = 0; i < 9; ++i) stream << double(i);
+        for (int i = 0; i < 9; ++i)
+            stream << double(i);
         stream << qint32(0);
         file.close();
-        auto node = std::make_shared<DataNode>(nullptr, "Restored");
-        node->path = binPath;
+        auto node    = std::make_shared<DataNode>(nullptr, "Restored");
+        node->path   = binPath;
         node->format = QSpace::IO::FileFormat::BIN;
-        node->type = QSpace::Visualize::EntityType::Gas;
+        node->type   = QSpace::Visualize::EntityType::Gas;
         registry->registerNode(node);
-        const QUuid id = node->id;
+        const QUuid   id   = node->id;
         const QString path = dir.filePath("project.json");
         project->saveCurrentProjectAs(path);
         QVERIFY(QFile::exists(path));
         project->createNewProject("Other");
         QCOMPARE(registry->nodeCount(), 0);
-        QSignalSpy loaded(controller.get(), &DataController::nodeDataLoaded);
+        QSignalSpy loaded(controller.get(), &ImportController::nodeDataLoaded);
         QSignalSpy states(project.get(), &ProjectController::sessionStateChanged);
         project->openProject(path);
         QCOMPARE(states.count(), 1);
         QVERIFY(!states.last().at(0).value<QSpace::Session::CurrentSession>().isDirty);
-        QCOMPARE(states.last().at(0).value<QSpace::Session::CurrentSession>().projectFilePath, path);
+        QCOMPARE(states.last().at(0).value<QSpace::Session::CurrentSession>().projectFilePath,
+                 path);
         QTRY_VERIFY(registry->getNode(id));
         QTRY_VERIFY(registry->getNode(id)->data != nullptr);
         QCOMPARE(loaded.count(), 1);
     }
+
   private:
-    std::unique_ptr<TaskManager> tasks;
-    std::unique_ptr<DataManager> data;
-    std::unique_ptr<ObjectRegistry> registry;
-    std::unique_ptr<LayerManager> layers;
-    std::unique_ptr<ViewManager> views;
+    std::unique_ptr<TaskManager>        tasks;
+    std::unique_ptr<DataManager>        data;
+    std::unique_ptr<ObjectRegistry>     registry;
+    std::unique_ptr<LayerManager>       layers;
+    std::unique_ptr<ViewManager>        views;
     std::unique_ptr<FileSchemeRegistry> schemes;
-    std::unique_ptr<DataController> controller;
-    std::unique_ptr<SessionManager> session;
-    std::unique_ptr<ProjectController> project;
+    std::unique_ptr<ImportController>   controller;
+    std::unique_ptr<SessionManager>     session;
+    std::unique_ptr<ProjectController>  project;
 };
 
 QTEST_MAIN(TestProjectController)

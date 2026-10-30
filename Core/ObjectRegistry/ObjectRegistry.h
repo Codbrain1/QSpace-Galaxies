@@ -63,6 +63,7 @@ class OBJECTREGISTRY_EXPORT ObjectRegistry : public QObject {
     std::shared_ptr<DataNode>   getOrLoadNodeData(const QUuid& id);
     std::shared_ptr<Snapshot>   getSnapshot(const QUuid& id) const;
     std::shared_ptr<Experiment> getExperiment(const QUuid& id) const;
+    std::shared_ptr<Experiment> getExperimentForNode(const QUuid& nodeId) const;
 
     void                        removeObject(const QUuid& id);
     std::shared_ptr<Snapshot>   findSnapshotByName(const QString& name) const;

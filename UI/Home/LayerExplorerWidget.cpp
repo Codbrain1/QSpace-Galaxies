@@ -9,15 +9,23 @@
 #include "SelectExperimentDialog.h"
 #include "Structures/ObjectRegistryStructures.h"
 #include "ui_LayerExplorerWidget.h"
-#include <Core/AppCore/DataController.h>
+#include <Core/AppCore/ExperimentController.h>
+#include <Core/AppCore/ImportController.h>
+#include <Core/AppCore/LayerController.h>
 #include <QActionGroup>
+#include <QCheckBox>
+#include <QDialog>
+#include <QDialogButtonBox>
+#include <QDoubleSpinBox>
 #include <QFileSystemModel>
+#include <QFormLayout>
 #include <QHeaderView>
 #include <QMenu>
 #include <QMessageBox>
 #include <QSortFilterProxyModel>
 #include <QTreeView>
 
+#include <limits>
 #include <memory>
 #include <qabstractitemmodel.h>
 #include <qabstractspinbox.h>
@@ -150,8 +158,8 @@ void LayerExplorerWidget::setupSlots() {
     // сообщает ядру об активации ноды
     connect(this,
             &LayerExplorerWidget::nodeSelectionActivated,
-            m_app->dataController(),
-            &QSpace::Core::Controllers::DataController::onNodeSelectionActivated,
+            m_app->layerController(),
+            &QSpace::Core::Controllers::LayerController::onNodeSelectionActivated,
             Qt::QueuedConnection);
     // отвечает за отображение меню с настройками
     connect(ui->toolButton_VisiblePropertyInspector,
@@ -201,13 +209,13 @@ void LayerExplorerWidget::setupSlots() {
     if (m_app && m_app->dataTreeModel()) {
         connect(this,
                 &LayerExplorerWidget::removalObjectRequested,
-                m_app->dataController(),
-                &Core::Controllers::DataController::removeNodeObject,
+                m_app->importController(),
+                &Core::Controllers::ImportController::removeNodeObject,
                 Qt::QueuedConnection);
         connect(this,
                 &LayerExplorerWidget::removalLayerRequested,
-                m_app->dataController(),
-                &Core::Controllers::DataController::removeLayer,
+                m_app->layerController(),
+                &Core::Controllers::LayerController::removeLayer,
                 Qt::QueuedConnection);
     }
     connect(ui->toolButton_CollapseAll, &QToolButton::clicked, this, &LayerExplorerWidget::handleCollapseAll);
@@ -631,11 +639,67 @@ void LayerExplorerWidget::handleShowCustomContexMenuForTreeViewElement(const QPo
 }
 
 void LayerExplorerWidget::showCustomContextMenuForExperimentInternal(QMenu* menu, const QModelIndex& index) {
-    QUuid    experimentId = index.data(Models::DataTreeModel::CustomRoles::IdRole).toUuid();
-    QAction* deleteAction = menu->addAction(tr("Удалить эксперимент"));
+    QUuid    experimentId           = index.data(Models::DataTreeModel::CustomRoles::IdRole).toUuid();
+    QAction* deleteAction           = menu->addAction(tr("Удалить эксперимент"));
+    QAction* setPhysicalScaleAction = menu->addAction("Задать перевод в размерные величины");
 
     connect(deleteAction, &QAction::triggered, this, [this, experimentId]() {
         emit removalObjectRequested(experimentId);
+    });
+    connect(setPhysicalScaleAction, &QAction::triggered, this, [this, experimentId]() {
+        const auto experimentController = m_app->experimentController();
+        const auto experiment =
+            experimentController ? experimentController->getExperimentById(experimentId) : nullptr;
+        if (!experiment) {
+            QMessageBox::warning(this, tr("Внимание"), tr("Эксперимент с данным идентификатором не найден."));
+            return;
+        }
+
+        QDialog dialog(this);
+        dialog.setWindowTitle(tr("Перевод в размерные величины"));
+
+        auto* formLayout    = new QFormLayout(&dialog);
+        auto* kmSpinBox     = new QDoubleSpinBox(&dialog);
+        auto* krSpinBox     = new QDoubleSpinBox(&dialog);
+        auto* gammaBox      = new QDoubleSpinBox(&dialog);
+        auto* gammaCheckBox = new QCheckBox(tr("Использовать gamma"), &dialog);
+        auto* buttonBox     = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
+
+        for (auto* spinBox : {kmSpinBox, krSpinBox, gammaBox}) {
+            spinBox->setDecimals(8);
+            spinBox->setMaximum(1.0e12);
+        }
+        kmSpinBox->setRange(std::numeric_limits<double>::min(), 1.0e12);
+        krSpinBox->setRange(std::numeric_limits<double>::min(), 1.0e12);
+        gammaBox->setRange(1.0 + 1.0e-8, 1.0e12);
+
+        kmSpinBox->setValue(experiment->profile.Km);
+        krSpinBox->setValue(experiment->profile.Kr);
+        gammaBox->setValue(experiment->profile.gamma);
+        gammaCheckBox->setChecked(experiment->profile.haveGamma);
+        gammaBox->setEnabled(gammaCheckBox->isChecked());
+
+        formLayout->addRow(tr("Km:"), kmSpinBox);
+        formLayout->addRow(tr("Kr:"), krSpinBox);
+        formLayout->addRow(gammaCheckBox, gammaBox);
+        formLayout->addRow(buttonBox);
+
+        connect(gammaCheckBox, &QCheckBox::toggled, gammaBox, &QDoubleSpinBox::setEnabled);
+        connect(buttonBox, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
+        connect(buttonBox, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+
+        if (dialog.exec() != QDialog::Accepted) {
+            return;
+        }
+
+        Core::PhysicalUnitsProfile profile;
+        profile.Km = kmSpinBox->value();
+        profile.Kr = krSpinBox->value();
+        profile.gamma = gammaBox->value();
+        profile.haveGamma = gammaCheckBox->isChecked();
+        if (!experimentController || !experimentController->updatePhysicalUnits(experimentId, profile)) {
+            QMessageBox::warning(this, tr("Внимание"), tr("Не удалось сохранить параметры эксперимента."));
+        }
     });
 
     auto mode = static_cast<Models::DataTreeModel::TreeMode>(ui->comboBox_structureView->currentIndex());
@@ -672,10 +736,9 @@ void LayerExplorerWidget::showCustomContextMenuForDataNodeInternal(QMenu* menu, 
         emit nodeSelectionActivated(dataNodeId);
     });
     connect(addLayerAction, &QAction::triggered, this, [this, dataNodeId]() {
-        const auto dataController = m_app->dataController();
-        if (dataController) {
-            dataController->createLayerForNode(dataNodeId);
-        }
+        const auto layerController = m_app->layerController();
+        if (layerController)
+            layerController->createDefaultLayers(dataNodeId);
     });
 }
 void LayerExplorerWidget::showCustomContextMenuForComponentGroupInternal(QMenu*             menu,
@@ -728,11 +791,9 @@ void LayerExplorerWidget::handleAddLayer() {
         return;
     }
 
-    // 5. Делегируем бизнес-логику в DataController ядра системы
-    const auto dataController = m_app->dataController();
-    if (dataController) {
-        dataController->createLayerForNode(nodeId);
-    }
+    const auto layerController = m_app->layerController();
+    if (layerController)
+        layerController->createDefaultLayers(nodeId);
 }
 
 void LayerExplorerWidget::handleImportFilesRequestFromLayerEditor() {
@@ -778,12 +839,12 @@ void LayerExplorerWidget::handleImportFileRequestFromFileExplorer() {
         return;
     }
 
-    auto* dataController = m_app->dataController();
-    if (!dataController) {
-        qCCritical(LogUI) << "DataController pointer is segmentation fault!";
+    auto* importController = m_app->importController();
+    if (!importController) {
+        qCCritical(LogUI) << "ImportController pointer is unavailable";
         return;
     }
-    auto existingNodeId_opt = dataController->getNodeIdByFilePath(filePath);
+    auto existingNodeId_opt = importController->getNodeIdByFilePath(filePath);
     if (existingNodeId_opt.has_value()) {
         emit nodeSelectionActivated(existingNodeId_opt.value());
         qCInfo(LogIO) << "Data file added at existing node" << existingNodeId_opt.value();
@@ -797,7 +858,7 @@ void LayerExplorerWidget::handleImportFileRequestFromFileExplorer() {
 
 std::optional<SelectExperimentDialogResult> LayerExplorerWidget::selectExperimentDialogInternal() {
     auto experiments =
-        m_app->dataController()->getExperiments(); // Получаем список экспериментов из контроллера
+        m_app->experimentController()->getExperiments(); // Получаем список экспериментов из контроллера
 
     SelectExperimentDialog dialog(experiments, this);
     if (dialog.exec() != QDialog::Accepted) {
@@ -813,9 +874,9 @@ void LayerExplorerWidget::selectAndImportFilesInternal(const SelectExperimentDia
         return;
 
     if (result.isNewExperiment) {
-        m_app->dataController()->importExperiment(filePaths, result.newExperimentName, m_currentVersion);
+        m_app->importController()->importExperiment(filePaths, result.newExperimentName, m_currentVersion);
     } else {
-        m_app->dataController()->importFiles(filePaths, m_currentVersion, result.exisitingExperimentId);
+        m_app->importController()->importFiles(filePaths, m_currentVersion, result.exisitingExperimentId);
     }
 }
 
@@ -825,8 +886,8 @@ void LayerExplorerWidget::handleAddExperiment() {
     if (dirPath.isEmpty())
         return;
 
-    if (m_app && m_app->dataController()) {
-        m_app->dataController()->importExperiment(dirPath, m_currentVersion);
+    if (m_app && m_app->importController()) {
+        m_app->importController()->importExperiment(dirPath, m_currentVersion);
     }
 }
 

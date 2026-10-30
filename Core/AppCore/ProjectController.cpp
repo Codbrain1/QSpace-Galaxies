@@ -4,28 +4,27 @@
 #include "Core/ObjectRegistry/ObjectRegistry.h"
 #include "Core/SessionManager/SessionManager.h"
 #include <QFileInfo>
-#include "DataController.h"
+#include "ImportController.h"
 #include "Session/ProjectFormatFactory.h"
 #include "Structures/SessionStructures.h"
-
 
 namespace QSpace::Core::Controllers {
 
 ProjectController::ProjectController(Core::SessionManager* sessionManager,
                                      Core::ObjectRegistry* objectRegistry,
                                      Core::DataManager*    dataManager,
-                                     DataController*       dataController,
+                                     ImportController*     importController,
                                      QObject*              parent)
     : QObject(parent),
       m_sessionManager(sessionManager),
       m_objectRegistry(objectRegistry),
       m_dataManager(dataManager),
-      m_dataController(dataController) {
+      m_importController(importController) {
 }
 
 void ProjectController::initialize() {
-    // Слушаем DataController. Если там удалили или изменили ноду, помечаем сессию "грязной"
-    connect(m_dataController, &Controllers::DataController::markSessionDirty, this, [this]() {
+    // Слушаем ImportController. Если там удалили или изменили ноду, помечаем сессию "грязной"
+    connect(m_importController, &Controllers::ImportController::markSessionDirty, this, [this]() {
         m_sessionState.isDirty = true;
         emit sessionStateChanged(m_sessionState);
     });
@@ -84,7 +83,7 @@ void ProjectController::openProject(const QString& projectPath) {
     // ObjectRegistry and LayerManager now contain the restored lightweight
     // metadata. Load the corresponding files asynchronously so layers become
     // renderable without requiring manual selection in the tree.
-    m_dataController->loadRestoredNodes();
+    m_importController->loadRestoredNodes();
 
     m_sessionState.projectName     = QFileInfo(projectPath).baseName();
     m_sessionState.projectFilePath = projectPath;

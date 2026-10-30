@@ -1,6 +1,7 @@
 #include "TimeLineWidget.h"
 #include "Common/Logger/Logger.h"
-#include "Core/AppCore/DataController.h"
+#include "Core/AppCore/ImportController.h"
+#include "Core/AppCore/LayerController.h"
 #include "Core/AppCore/VideoController.h"
 #include "QAbstractItemView"
 #include "ui_TimeLineWidget.h"
@@ -94,7 +95,7 @@ void TimeLineWidget::handleToolButtonEditLayerSettings() {
 // =========== Внутренние методы ===========
 void TimeLineWidget::setTextTimeLabelTextInternal() {
     // ЗАЩИТА ОТ ВЫЛЕТОВ (Обязательно!)
-    if (!m_app || !m_app->dataController())
+    if (!m_app || !m_app->importController())
         return;
 
     int    value     = ui->TimeSlider->value();
@@ -111,7 +112,7 @@ void TimeLineWidget::handleChangeEtalonSnapshot(const QList<QUuid>& list) {
     ui->comboBox->clear();
     for (const QUuid& id : layerList) {
         // Получаем красивое имя слоя из вашего менеджера по его UUID
-        auto layer = m_app->dataController()->getLayerById(id);
+        auto layer = m_app->layerController()->getLayerById(id);
         if (!layer)
             return;
         QString layerName = layer->name();

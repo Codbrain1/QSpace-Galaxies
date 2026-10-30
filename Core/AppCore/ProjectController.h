@@ -11,7 +11,7 @@ class DataManager;
 } // namespace QSpace::Core
 
 namespace QSpace::Core::Controllers {
-class DataController;
+class ImportController;
 }
 
 namespace QSpace::Core::Controllers {
@@ -24,7 +24,7 @@ class ProjectController : public QObject {
     explicit ProjectController(Core::SessionManager* sessionManager,
                                Core::ObjectRegistry* objectRegistry,
                                Core::DataManager*    dataManager,
-                               DataController*       dataController,
+                               ImportController*     importController,
                                QObject*              parent = nullptr);
 
     void initialize();
@@ -52,7 +52,7 @@ class ProjectController : public QObject {
     Core::SessionManager* m_sessionManager;
     Core::ObjectRegistry* m_objectRegistry;
     Core::DataManager*    m_dataManager;
-    DataController*       m_dataController; // Нужен для передачи состояния при загрузке
+    ImportController*     m_importController; // Временный API восстановления до выделения workflow
 
     [[deprecated]]
     Session::CurrentSession m_sessionState;

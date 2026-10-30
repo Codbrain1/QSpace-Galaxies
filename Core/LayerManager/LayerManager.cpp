@@ -219,6 +219,13 @@ std::shared_ptr<Visualize::Layers::Layer> LayerManager::getLayer(const QUuid& la
     return m_layers.value(layerId, nullptr);
 }
 
+void LayerManager::applyPhysicalUnits(const QUuid& nodeId, const PhysicalUnitsProfile& profile) {
+    for (const auto& layer : getLayersForNode(nodeId)) {
+        if (const auto settings = layer ? layer->getSettings() : nullptr)
+            settings->setPhysicalUnitsParameters(profile.Km, profile.Kr, profile.gamma, profile.haveGamma);
+    }
+}
+
 QList<std::shared_ptr<Visualize::Layers::Layer>> LayerManager::getLayersForNode(const QUuid& nodeId) const {
     QList<std::shared_ptr<Visualize::Layers::Layer>> result;
     for (const auto& id : m_nodeToLayers.value(nodeId)) {
